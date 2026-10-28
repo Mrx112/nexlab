@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0d17">
+  <meta name="description" content="NexLab public release and download statistics dashboard.">
+  <title>NexLab — Administrator dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="i18n.js" defer></script>
+  <script src="admin.js" defer></script>
+</head>
+<body class="admin-page">
+  <header class="admin-topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span>
+      <span>Nex<span>Lab</span></span>
+    </a>
+    <span class="admin-tag">PUBLIC METRICS</span>
+    <label class="language-picker"><span>Language</span><select id="language-select" data-language-select aria-label="Language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
+  </header>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-title">ADMINISTRATOR</div>
+      <nav aria-label="Administrator navigation">
+        <button class="admin-nav active" type="button" data-panel="overview">◫ <span>Overview</span></button>
+        <button class="admin-nav" type="button" data-panel="downloads">↓ <span>Downloads</span></button>
+        <button class="admin-nav" type="button" data-panel="releases">◷ <span>Releases</span></button>
+        <a class="admin-nav" href="index.html">↗ <span>Back to website</span></a>
+      </nav>
+      <div class="admin-sidebar-note">Read-only public repository data. No visitor tracking or private account controls are enabled.</div>
+    </aside>
+    <main class="admin-content">
+      <div class="admin-heading">
+        <div><div class="eyebrow">NEXLAB CONTROL ROOM</div><h1 id="panel-title">Overview</h1><p id="panel-description">Public release activity and download totals.</p></div>
+        <button class="button button-outline" id="refresh-metrics" type="button">Refresh data</button>
+      </div>
+      <div class="admin-notice"><b>GitHub-only mode</b><span>GitHub provides release asset download counts, but GitHub Pages does not expose website visitor analytics. Visitor totals are not collected.</span></div>
+      <p class="admin-status" id="admin-status" role="status">Loading release data…</p>
+      <section class="admin-panel active" data-panel-content="overview">
+        <div class="admin-metric-grid">
+          <article class="admin-metric"><span>Total release asset downloads</span><b id="total-downloads">—</b><small>Across all published releases</small></article>
+          <article class="admin-metric"><span>Latest version</span><b id="latest-version">—</b><small id="latest-date">Release date pending</small></article>
+          <article class="admin-metric"><span>Website visits</span><b>Not tracked</b><small>Requires a separate analytics backend</small></article>
+          <article class="admin-metric"><span>Repository</span><b>Public</b><small>GitHub release data</small></article>
+        </div>
+        <section class="admin-card">
+          <div class="admin-card-heading"><div><h2>Latest platform downloads</h2><p>Counts for the latest release package assets.</p></div><a href="https://github.com/Mrx112/nexlab/releases" target="_blank" rel="noopener noreferrer">Open releases ↗</a></div>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asset</th><th>Downloads</th><th>File size</th><th></th></tr></thead><tbody id="asset-rows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+        </section>
+      </section>
+      <section class="admin-panel" data-panel-content="downloads">
+        <section class="admin-card"><div class="admin-card-heading"><div><h2>Release downloads</h2><p>Download totals reported by GitHub for each release asset.</p></div></div>        <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Release asset</th><th>Downloads</th><th>File size</th><th>Release</th><th></th></tr></thead><tbody id="download-rows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>
+      </section>
+      <section class="admin-panel" data-panel-content="releases">
+        <section class="admin-card"><div class="admin-card-heading"><div><h2>Published releases</h2><p>Version tags and publication dates.</p></div></div><div class="admin-release-list" id="release-list"><p>Loading…</p></div></section>
+      </section>
+      <footer class="admin-footer">NexLab · Software created by Adi Susilo / Creator · <a href="https://github.com/Mrx112/nexlab" target="_blank" rel="noopener noreferrer">GitHub repository ↗</a></footer>
+    </main>
+  </div>
+</body>
+</html>

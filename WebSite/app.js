@@ -33,6 +33,27 @@
     toastTimer = setTimeout(() => toast.classList.remove("visible"), 3600);
   }
 
+  async function loadReleaseDownloadCount() {
+    const output = document.querySelector("#release-download-count");
+    if (!output) return;
+    try {
+      const response = await fetch("https://api.github.com/repos/Mrx112/nexlab/releases?per_page=100", {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
+      const releases = await response.json();
+      const total = releases.reduce((sum, release) =>
+        sum + release.assets.reduce((assetSum, asset) => assetSum + Number(asset.download_count || 0), 0), 0);
+      output.textContent = new Intl.NumberFormat(
+        document.documentElement.lang === "id" ? "id-ID" : "en-US"
+      ).format(total);
+    } catch (error) {
+      console.error("GitHub release download statistics could not be loaded.", error);
+      output.textContent = "Unavailable";
+      output.title = "Download counts are temporarily unavailable from GitHub.";
+    }
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   }
@@ -549,6 +570,7 @@
       }
     }
   });
+  loadReleaseDownloadCount();
   const menuToggle = document.querySelector(".menu-toggle");
   menuToggle.addEventListener("click", () => {
     const isOpen = menuToggle.getAttribute("aria-expanded") === "true";

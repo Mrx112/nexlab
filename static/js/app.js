@@ -385,6 +385,10 @@ const App = {
     v.innerHTML = `<div class="page-head"><div><h2>Status sistem</h2><p>Komputer (Linux, Windows atau macOS) yang menjalankan NexLab dan cara mengaksesnya dari perangkat lain.</p></div><span class="grow"></span><button class="btn sm" id="sysRef">${UI.refresh} Refresh</button></div>
     ${this.gauges(s)}
     <div class="cols">
+      <section class="panel update-panel"><h3>Update aplikasi</h3>
+        <p class="muted">Periksa GitHub Releases untuk versi NexLab yang lebih baru.</p>
+        <button class="btn sm primary" id="scanUpdates">Scan update</button>
+        <div class="update-result muted" id="updateResult" role="status" aria-live="polite"></div></section>
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Alamat akses</h3>
         <p class="muted" style="margin-top:0">Buka salah satu alamat ini dari komputer Windows atau HP di jaringan yang sama:</p>
         ${s.addresses.map(a => `<div style="margin:6px 0"><span class="url">${scheme}://${esc(a.ip)}:${s.port}/</span> <span class="muted">${esc(a.iface)}</span></div>`).join('')}
@@ -405,6 +409,41 @@ const App = {
         ${c.images.length ? `<table class="t"><tr><th>Nama</th><th>File</th></tr>${c.images.map(i => `<tr><td>${esc(i.name)}</td><td class="mono" style="font-size:12px">${esc(i.disks.join(', '))}</td></tr>`).join('')}</table>` : '<p class="muted">Belum ada. Taruh image di <span class="mono">data/images/qemu/&lt;nama&gt;/</span>, contoh <span class="mono">data/images/qemu/vios/vios.qcow2</span>.</p>'}</section>
     </div>`;
     v.querySelector('#sysRef').onclick = () => this.pageSystem(v);
+    v.querySelector('#scanUpdates').onclick = async event => {
+      const button = event.currentTarget;
+      const result = v.querySelector('#updateResult');
+      button.disabled = true;
+      result.textContent = 'Memeriksa rilis terbaru…';
+      const update = await this.api('GET', '/api/update/check');
+      button.disabled = false;
+      if (!update) {
+        result.textContent = 'Pemeriksaan update gagal. Periksa koneksi internet dan coba lagi.';
+        return;
+      }
+      if (!update.update_available) {
+        result.textContent = `NexLab ${update.current_version} sudah versi terbaru.`;
+        return;
+      }
+      let download;
+      try {
+        download = new URL(update.download_url);
+      } catch {
+        result.textContent = 'Tautan update dari GitHub tidak valid.';
+        return;
+      }
+      if (download.protocol !== 'https:' || download.hostname !== 'github.com'
+          || !download.pathname.startsWith('/Mrx112/nexlab/releases/latest/download/')) {
+        result.textContent = 'Tautan update dari GitHub tidak valid.';
+        return;
+      }
+      result.textContent = `Versi ${update.latest_version} tersedia. Unduh installer, tutup NexLab, lalu jalankan installer untuk memperbarui. `;
+      const link = document.createElement('a');
+      link.href = download.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Download update';
+      result.append(link);
+    };
     const extra = document.createElement('div'); extra.className = 'cols'; extra.style.marginTop = '14px';
     v.appendChild(extra);
     const [ai, run] = await Promise.all([this.api('GET', '/api/ai/status?force=1', null, true), this.me.role === 'admin' ? this.api('GET', '/api/admin/running', null, true) : null]);

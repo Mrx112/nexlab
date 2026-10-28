@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,13 +8,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/vendor/xterm.css">
-<link rel="stylesheet" href="/static/css/app.css?v=pnet3">
+<link rel="stylesheet" href="/static/css/app.css?v=pnet13">
 <script type="importmap">{"imports":{"three":"/static/vendor/three.module.min.js","three/addons/":"/static/vendor/addons/"}}</script>
 </head>
 <body>
 
 <!-- ============ AUTH ============ -->
 <section id="auth" class="hidden">
+  <label class="language-control auth-language" aria-label="Language">
+    <span>Language</span>
+    <select data-language-select>
+      <option value="en">English</option>
+      <option value="id">Bahasa Indonesia</option>
+    </select>
+  </label>
   <div class="auth-box">
     <div class="auth-logo">
       <svg class="brand-mark lg" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="6" fill="#1F6FB5"/><circle cx="10" cy="11" r="3.2" fill="#fff"/><circle cx="22" cy="11" r="3.2" fill="#fff"/><circle cx="16" cy="22" r="3.2" fill="#fff"/><path d="M10 11L22 11L16 22Z" fill="none" stroke="#fff" stroke-width="1.2"/></svg>
@@ -54,6 +61,13 @@
       <a href="#/users" data-nav="users" data-ico="users" class="admin-only">Manajemen user</a>
       <a href="#/help" data-nav="help" data-ico="help">Panduan</a>
     </nav>
+    <label class="language-control app-language" aria-label="Language">
+      <span>Language</span>
+      <select data-language-select>
+        <option value="en">English</option>
+        <option value="id">Bahasa Indonesia</option>
+      </select>
+    </label>
     <div class="user-chip">
       <button class="user-btn" id="avatarBtn" title="Akun"><span class="avatar" data-ico="user"></span><span id="whoami"></span><span class="car" data-ico="caret"></span></button>
     </div>
@@ -71,6 +85,7 @@
 <script src="/static/js/guide.js?v=pnet3"></script>
 <script src="/static/js/editor.js?v=pnet3"></script>
 <script src="/static/js/editor-plus.js?v=pnet3"></script>
-<script src="/static/js/app.js?v=pnet3"></script>
+<script src="/static/js/i18n.js?v=pnet13"></script>
+<script src="/static/js/app.js?v=pnet13"></script>
 </body>
 </html>

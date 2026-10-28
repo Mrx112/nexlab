@@ -110,6 +110,10 @@ Paket aplikasi membawa NexLab dan aset `static/`, serta tidak memerlukan instala
 - macOS: `~/Library/Application Support/NexLab/data`
 - Linux: `${XDG_DATA_HOME:-~/.local/share}/nexlab`
 
+### Memeriksa update dari aplikasi
+
+Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi dengan GitHub Release stabil terbaru. Jika ada versi baru, NexLab menampilkan installer yang sesuai dengan sistem operasi server dan tautan unduhan. Tutup NexLab, unduh, lalu jalankan installer untuk memperbarui; aplikasi tidak mengganti atau menjalankan file secara diam-diam. Data lab dan akun tetap berada di folder data OS di atas. Pemeriksaan memerlukan koneksi internet dan aset installer pada GitHub Release terbaru.
+
 Arsip unduhan dan file sementara installer dihapus setelah instalasi berhasil; bila gagal, file diagnostik sementara tetap disimpan dan lokasinya ditampilkan. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
 GitHub Release tidak tersedia sampai tag pertama dibuat dan seluruh job build lulus. Push kode ke `master`, lalu buat/push tag versi yang sama dengan versi aplikasi, saat ini `v1.2.0`; setelah release selesai, ketiga tombol Download dapat mengunduh installer yang benar.
@@ -183,6 +187,20 @@ Website promosi dan marketplace komunitas tersedia di folder `WebSite/`. Buka `W
 Katalog bawaan ditandai sebagai contoh. Kreator dapat menyimpan listing beserta file lab NexLab di penyimpanan browser, mengunduh file tersebut, atau mengekspor dan membagikan paket listing untuk diimpor di browser lain. Ini adalah alur berbagi statis, bukan marketplace server: pembayaran perlu dihubungkan pada `WebSite/config.js` sebelum menjual file berbayar. Tombol unduhan per OS sudah diarahkan ke installer pada GitHub Release terbaru; setelah rilis pertama tersedia, installer mengambil paket aplikasi, memeriksa SHA-256, memasang NexLab, dan membuat shortcut. Isi `donateUrl` dan `checkoutUrl` di file konfigurasi yang sama untuk mengaktifkan tautan donasi dan checkout.
 
 Website dibuat oleh Adi Susilo / Creator.
+
+## Tangkapan layar dan showcase
+
+Berikut tampilan NexLab saat digunakan: editor topologi demo, pemantauan sistem dengan pemeriksaan update, serta website promosi dan dashboard statistik publik GitHub. Dashboard hanya menampilkan data rilis/unduhan publik; kunjungan website tidak dilacak.
+
+![Editor topologi NexLab](screenshots/app-topology.png)
+
+![Status sistem dan pemeriksaan update](screenshots/app-system-update.png)
+
+![Website NexLab](screenshots/website-home.png)
+
+![Dashboard statistik publik](screenshots/website-admin.png)
+
+![Animasi showcase NexLab](screenshots/nexlab-showcase.gif)
 
 ## Lab demo
 

@@ -6,6 +6,9 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
+from urllib.parse import urlparse
 
 from aiohttp import web, WSMsgType
 
@@ -23,6 +26,12 @@ BASE = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.dirname(os.path
 STATIC = os.path.join(BASE, 'static')
 COOKIE = 'nexlab_session'
 VERSION = '1.2.0'
+_RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
+_UPDATE_ASSETS = {
+    'win32': 'NexLab-Setup-Windows.cmd',
+    'darwin': 'NexLab-Setup-macOS.command',
+    'linux': 'NexLab-Setup-Linux.sh',
+}
 
 _fails = {}
 
@@ -200,6 +209,79 @@ async def system(req):
         'mem_total': total, 'mem_avail': avail,
         'app_rss_mb': rss, 'running_nodes': rt_nodes, 'port': app['port'],
         'addresses': lan_addresses(), 'caps': app['real'].caps(),
+    })
+
+
+def _version_tuple(value):
+    match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', str(value).strip())
+    return tuple(int(part) for part in match.groups()) if match else None
+
+
+def _fetch_latest_release():
+    request = urllib.request.Request(
+        _RELEASE_API,
+        headers={
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'NexLab-update-check',
+        },
+    )
+    with urllib.request.urlopen(request, timeout=8) as response:
+        payload = json.loads(response.read(1024 * 1024).decode('utf-8'))
+    if not isinstance(payload, dict):
+        raise ValueError('GitHub returned an invalid release response.')
+
+    tag = payload.get('tag_name')
+    url = payload.get('html_url')
+    assets = payload.get('assets')
+    if not isinstance(tag, str) or not _version_tuple(tag):
+        raise ValueError('Latest GitHub release has an invalid version tag.')
+    parsed_url = urlparse(url) if isinstance(url, str) else None
+    if (
+        parsed_url is None
+        or parsed_url.scheme != 'https'
+        or parsed_url.netloc != 'github.com'
+        or not (
+            parsed_url.path == '/Mrx112/nexlab/releases/latest'
+            or parsed_url.path.startswith('/Mrx112/nexlab/releases/tag/')
+        )
+    ):
+        raise ValueError('Latest GitHub release has an invalid URL.')
+    if not isinstance(assets, list):
+        raise ValueError('Latest GitHub release has no asset list.')
+
+    asset_name = _UPDATE_ASSETS.get(sys.platform)
+    if asset_name is None:
+        raise ValueError(f'Updates are not available for {sys.platform}.')
+    if not any(isinstance(asset, dict) and asset.get('name') == asset_name for asset in assets):
+        raise ValueError(f'Latest release is missing the {asset_name} installer.')
+    return {
+        'version': tag.lstrip('v'),
+        'release_url': url,
+        'download_url': f'https://github.com/Mrx112/nexlab/releases/latest/download/{asset_name}',
+    }
+
+
+async def update_check(req):
+    cached = req.app.get('latest_release_cache')
+    if cached and time.monotonic() - cached['checked_at'] < 300:
+        latest = cached['release']
+    else:
+        try:
+            latest = await asyncio.to_thread(_fetch_latest_release)
+        except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as error:
+            return jerr(f'Pemeriksaan update gagal: {error}', 502)
+        req.app['latest_release_cache'] = {'checked_at': time.monotonic(), 'release': latest}
+
+    current_version = _version_tuple(VERSION)
+    latest_version = _version_tuple(latest['version'])
+    if current_version is None or latest_version is None:
+        return jerr('Versi aplikasi tidak valid; update tidak dapat dibandingkan.', 500)
+    return web.json_response({
+        'current_version': VERSION,
+        'latest_version': latest['version'],
+        'update_available': latest_version > current_version,
+        'release_url': latest['release_url'],
+        'download_url': latest['download_url'] if latest_version > current_version else '',
     })
 
 
@@ -866,6 +948,7 @@ def build_app(data_dir, port=8080):
     r.add_get('/api/me', me)
     r.add_post('/api/me/password', change_password)
     r.add_get('/api/system', system)
+    r.add_get('/api/update/check', update_check)
     r.add_get('/api/templates', templates)
     r.add_get('/api/labs', labs_list)
     r.add_post('/api/labs', lab_create)

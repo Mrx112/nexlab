@@ -58,6 +58,12 @@ textarea.input{height:auto;padding:7px 10px;resize:vertical;font-family:var(--f-
   background:radial-gradient(1200px 600px at 20% 10%,#3C8DD6 0,transparent 60%),linear-gradient(135deg,#123E6B 0%,#1F6FB5 55%,#2B8AD8 100%)}
 #auth::before{content:"";position:absolute;inset:0;opacity:.12;pointer-events:none;
   background-image:radial-gradient(#fff 1.2px,transparent 1.4px);background-size:28px 28px}
+.language-control{display:flex;align-items:center;gap:6px;color:#42566a;font-size:11px;white-space:nowrap}
+.language-control select{height:30px;max-width:145px;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:0 7px;background:#fff;color:#24374a;font-size:11px}
+.auth-language{position:absolute;z-index:2;top:14px;right:16px}
+.app-language{margin-left:auto;color:#e3effa}
+.app-language select{height:28px;background:rgba(255,255,255,.1);color:#fff}
+.app-language option{color:#24374a}
 .auth-box{position:relative;width:100%;max-width:380px;background:#fff;border-radius:var(--r-l);box-shadow:0 20px 50px rgba(5,25,50,.35);padding:28px 30px 22px}
 .auth-logo{display:flex;align-items:center;gap:12px;justify-content:center}
 .auth-title{font-size:24px;font-weight:700;color:var(--pri);line-height:1.1}
@@ -285,6 +291,8 @@ body.popout .cwin{inset:0;width:100%!important;height:100%!important;border:0;bo
   #editor.ins-open .zoomctl{right:12px}
   .nav a{padding:0 9px}.nav a span{display:none}
   .topbar .appTitle{display:none}
+  .language-control span{display:none}
+  .language-control select{max-width:110px}
 }
 #gTemp{pointer-events:none}
 .seg{display:flex;gap:2px;background:#fff;border:1px solid var(--line);border-radius:var(--r-s);padding:2px}

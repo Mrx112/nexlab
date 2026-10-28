@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,6 +9,7 @@
   <title>NexLab — Rancang. Simulasikan. Hubungkan.</title>
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
+  <script src="i18n.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -30,6 +31,7 @@
       <a href="#marketplace">Marketplace</a>
       <a href="#donasi">Dukung project</a>
     </nav>
+    <label class="language-picker"><span data-i18n>Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
     <a class="button button-small button-outline header-cta" href="#download">Mulai gratis <span aria-hidden="true">↗</span></a>
   </header>
 
@@ -111,6 +113,10 @@
           <a class="download-option" data-download="linux" href="https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-Linux.sh"><span class="os-icon linux-icon">⌁</span><span class="os-text"><b>Linux</b><small>x86_64 · installer tanpa root</small></span><span class="download-arrow">↓</span></a>
           <a class="download-guide" href="../README.md" target="_blank" rel="noreferrer">Baca panduan instalasi lengkap <span>↗</span></a>
           <div class="download-meta"><span>Installer mengunduh paket rilis terverifikasi</span><span>Data lab tetap tersimpan saat update</span></div>
+          <div class="public-metrics" aria-live="polite">
+            <div><span>Downloads on GitHub</span><b id="release-download-count">Loading…</b></div>
+            <div><span>Website visits</span><b>Not tracked</b></div>
+          </div>
         </div>
       </div>
     </section>
@@ -148,7 +154,7 @@
     <section class="cta-strip section-wrap"><div><span class="eyebrow">IDE BESAR DIMULAI DARI SATU LAB</span><h2>Jaringan berikutnya bisa jadi <span>karyamu.</span></h2></div><a class="button button-light" href="#download">Mulai eksplorasi <span>↗</span></a></section>
   </main>
 
-  <footer class="site-footer"><div class="section-wrap footer-main"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span><span>Nex<span>Lab</span></span></a><p>Ruang aman untuk membangun<br>jaringan yang lebih baik.</p><div class="footer-links"><a href="#fitur">Fitur</a><a href="#download">Download</a><a href="#marketplace">Marketplace</a><a href="#donasi">Dukung project</a></div></div><div class="section-wrap footer-bottom"><span>© <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.</span><a href="../README.md" target="_blank" rel="noreferrer">Dokumentasi aplikasi ↗</a></div></footer>
+  <footer class="site-footer"><div class="section-wrap footer-main"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span><span>Nex<span>Lab</span></span></a><p>Ruang aman untuk membangun<br>jaringan yang lebih baik.</p><div class="footer-links"><a href="#fitur">Fitur</a><a href="#download">Download</a><a href="#marketplace">Marketplace</a><a href="#donasi">Dukung project</a><a href="admin.html">Administrator</a></div></div><div class="section-wrap footer-bottom"><span>© <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.</span><a href="../README.md" target="_blank" rel="noreferrer">Dokumentasi aplikasi ↗</a></div></footer>
 
   <dialog class="detail-dialog" id="detail-dialog" aria-labelledby="detail-title"></dialog>
   <dialog class="sell-dialog" id="sell-dialog" aria-labelledby="sell-title">
