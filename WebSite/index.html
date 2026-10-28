@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0d17">
+  <meta name="description" content="NexLab adalah lab jaringan interaktif untuk belajar, merancang topologi, dan menjalankan simulasi jaringan.">
+  <meta name="author" content="Adi Susilo">
+  <title>NexLab — Rancang. Simulasikan. Hubungkan.</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="cinematic-backdrop" aria-hidden="true">
+    <img class="cinematic-frame is-current" src="bg/optimized/00001.webp" alt="" fetchpriority="high">
+    <img class="cinematic-frame" alt="" loading="eager">
+    <div class="cinematic-wash"></div>
+  </div>
+  <div class="cinematic-readout" aria-hidden="true"><span>NETWORK FILM</span><span class="cinematic-track"><i></i></span><span id="scene-counter">001 / 240</span></div>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="NexLab beranda">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span>
+      <span>Nex<span>Lab</span></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-label="Buka navigasi" aria-expanded="false">☰</button>
+    <nav class="main-nav" aria-label="Navigasi utama">
+      <a href="#fitur">Fitur</a>
+      <a href="#download">Download</a>
+      <a href="#marketplace">Marketplace</a>
+      <a href="#donasi">Dukung project</a>
+    </nav>
+    <a class="button button-small button-outline header-cta" href="#download">Mulai gratis <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero section-wrap" id="home">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-dot"></span> NETWORK LAB, TANPA BATAS</div>
+        <h1>Bangun jaringan.<br><span>Uji ide besarmu.</span></h1>
+        <p class="hero-lede">Satu ruang untuk merancang topologi, belajar konfigurasi, dan bereksperimen dengan jaringan — langsung dari browser.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#download">Jelajahi NexLab <span aria-hidden="true">↗</span></a>
+          <a class="button button-quiet" href="#marketplace"><span class="play-icon" aria-hidden="true">▷</span> Lihat marketplace</a>
+        </div>
+        <div class="hero-proof"><span class="avatar-stack"><i>R</i><i>A</i><i>N</i></span><span>Dibuat untuk pembelajar, engineer, dan kreator jaringan.</span></div>
+      </div>
+      <div class="hero-art" aria-label="Ilustrasi topologi jaringan NexLab">
+        <div class="art-glow"></div>
+        <div class="art-grid"></div>
+        <div class="art-label"><span class="live-pulse"></span> TOPOLOGI LIVE <span>LAB-01</span></div>
+        <svg class="network-art" viewBox="0 0 610 430" role="img" aria-label="Router terhubung ke switch dan beberapa perangkat">
+          <defs>
+            <linearGradient id="line" x1="0" x2="1"><stop stop-color="#6574ff"/><stop offset="1" stop-color="#37e6bd"/></linearGradient>
+            <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
+          </defs>
+          <path class="wire wire-glow" d="M292 118 174 205M318 119 431 202M174 235 95 315M182 242 219 325M431 232 387 321M444 232 520 309"/>
+          <path class="wire" d="M292 118 174 205M318 119 431 202M174 235 95 315M182 242 219 325M431 232 387 321M444 232 520 309"/>
+          <g class="node node-main" transform="translate(264 65)"><rect width="82" height="70" rx="19"/><path d="M25 35h32m-16-16v32m-10-25 20 18m0-18-20 18"/></g>
+          <g class="node node-switch" transform="translate(130 192)"><rect width="88" height="58" rx="15"/><path d="M21 29h46m-39-8 9 8-9 8m30-16 9 8-9 8"/></g>
+          <g class="node node-switch" transform="translate(387 192)"><rect width="88" height="58" rx="15"/><path d="M21 29h46m-39-8 9 8-9 8m30-16 9 8-9 8"/></g>
+          <g class="node node-client" transform="translate(65 304)"><rect width="61" height="49" rx="12"/><path d="M17 16h27v16H17zm7 23h13"/></g>
+          <g class="node node-client" transform="translate(188 314)"><rect width="61" height="49" rx="12"/><path d="M17 16h27v16H17zm7 23h13"/></g>
+          <g class="node node-client" transform="translate(357 310)"><rect width="61" height="49" rx="12"/><path d="M17 16h27v16H17zm7 23h13"/></g>
+          <g class="node node-client" transform="translate(490 299)"><rect width="61" height="49" rx="12"/><path d="M17 16h27v16H17zm7 23h13"/></g>
+          <circle class="packet packet-a" cx="239" cy="158" r="4"/><circle class="packet packet-b" cx="371" cy="159" r="4"/><circle class="packet packet-c" cx="148" cy="276" r="4"/>
+          <text x="305" y="156" text-anchor="middle" class="node-caption">EDGE ROUTER</text>
+          <text x="173" y="269" text-anchor="middle" class="node-caption">SW-CORE-01</text>
+          <text x="431" y="269" text-anchor="middle" class="node-caption">SW-ACCESS-01</text>
+        </svg>
+        <div class="art-bottom"><span><b class="green-dot"></b> 7 perangkat online</span><span>VLAN 10 · VLAN 20 · WAN</span></div>
+        <div class="float-card float-card-top"><span class="float-icon">⌘</span><span><b>Simulasi berjalan</b><small>Packet flow aktif</small></span><span class="mini-bars"><i></i><i></i><i></i><i></i></span></div>
+        <div class="float-card float-card-bottom"><span class="check-icon">✓</span><span><b>Ping berhasil</b><small>192.168.10.1 · 2 ms</small></span></div>
+      </div>
+      <div class="hero-footnote"><span>01 / 04</span><span class="footnote-line"></span><span>RUANG KERJA JARINGANMU</span></div>
+    </section>
+
+    <section class="trust-strip" aria-label="Kompatibilitas">
+      <div class="section-wrap trust-inner"><span>SATU LAB, BANYAK KEMUNGKINAN</span><b>ROUTING</b><b>SWITCHING</b><b>FIREWALL</b><b>WIRELESS</b><b>FTTH</b></div>
+    </section>
+
+    <section class="features section-wrap section-pad" id="fitur">
+      <div class="section-heading">
+        <div><div class="eyebrow">LAB LENGKAP, ALUR TETAP SEDERHANA</div><h2>Dari ide ke jaringan<br><span>yang benar-benar jalan.</span></h2></div>
+        <p>Belajar konsep dasar, menguji skenario kompleks, sampai merencanakan instalasi fisik. Semua dimulai dari kanvas yang sama.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card feature-card-large">
+          <div class="feature-visual visual-canvas"><div class="canvas-toolbar"><i></i><i></i><i></i><span>Lab jaringan — Topologi 01</span></div><div class="canvas-lines"></div><div class="canvas-node cn-a">RTR</div><div class="canvas-node cn-b">SW1</div><div class="canvas-node cn-c">PC</div><div class="canvas-node cn-d">SRV</div><div class="canvas-note">VLAN 20</div></div>
+          <div class="feature-copy"><span class="feature-number">01</span><h3>Rancang topologi visual</h3><p>Tarik perangkat, sambungkan port, atur VLAN, dan bangun lab sesuai ide — tanpa berantakan.</p></div>
+        </article>
+        <article class="feature-card">
+          <div class="feature-visual visual-terminal"><div class="terminal-top"><span></span><span></span><span></span><b>Console · R1</b></div><code><i>R1</i># show ip interface brief<br><em>GigabitEthernet0/0</em> <strong>192.168.10.1</strong><br><em>GigabitEthernet0/1</em> <strong>up / up</strong><br><i>R1</i># <span class="cursor"></span></code></div>
+          <div class="feature-copy"><span class="feature-number">02</span><h3>Belajar sambil praktik</h3><p>Console interaktif, panduan langkah demi langkah, dan lab demo siap pakai.</p></div>
+        </article>
+        <article class="feature-card">
+          <div class="feature-visual visual-map"><div class="map-building"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="map-pole">⌁</div><div class="map-route"></div><span class="map-tag tag-fiber">FIBER SM</span><span class="map-tag tag-ap">Wi-Fi 6</span><span class="map-tag tag-ont">ONT</span></div>
+          <div class="feature-copy"><span class="feature-number">03</span><h3>Rencanakan instalasi nyata</h3><p>Peta 3D, jalur kabel, daftar material, dan kalkulasi link untuk desain lapangan.</p></div>
+        </article>
+      </div>
+      <div class="feature-tags"><span>Router &amp; switch</span><span>OSPF · VLAN · ACL</span><span>Wi-Fi &amp; FTTH</span><span>QEMU &amp; Linux Host*</span><span>Workbook &amp; penilaian</span></div>
+      <p class="fine-print">* Fitur perangkat real memerlukan image milik sendiri dan konfigurasi server yang sesuai.</p>
+    </section>
+
+    <section class="download-section" id="download">
+      <div class="section-wrap download-inner">
+        <div class="download-copy"><div class="eyebrow"><span class="status-dot"></span> SIAP MEMULAI?</div><h2>Lab jaringanmu.<br><span>Perangkatmu.</span></h2><p>NexLab berjalan di komputer sendiri dan dibuka lewat browser. Pilih sistem operasi untuk melihat langkah instalasi.</p><div class="download-note"><span class="note-icon">i</span><span><b>Perlu paket aplikasi lengkap</b><br>File di bawah adalah skrip installer. Ekstrak paket NexLab terlebih dahulu, lalu jalankan skrip dari folder aplikasi.</span></div></div>
+        <div class="download-options">
+          <a class="download-option" data-download="windows" href="https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-Windows.cmd"><span class="os-icon windows-icon">⊞</span><span class="os-text"><b>Windows 10 / 11</b><small>Windows x64 · installer otomatis</small></span><span class="download-arrow">↓</span></a>
+          <a class="download-option" data-download="macos" href="https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-macOS.command"><span class="os-icon apple-icon">⌘</span><span class="os-text"><b>macOS</b><small>Apple Silicon &amp; Intel · pilih Open</small></span><span class="download-arrow">↓</span></a>
+          <a class="download-option" data-download="linux" href="https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-Linux.sh"><span class="os-icon linux-icon">⌁</span><span class="os-text"><b>Linux</b><small>x86_64 · installer tanpa root</small></span><span class="download-arrow">↓</span></a>
+          <a class="download-guide" href="../README.md" target="_blank" rel="noreferrer">Baca panduan instalasi lengkap <span>↗</span></a>
+          <div class="download-meta"><span>Installer mengunduh paket rilis terverifikasi</span><span>Data lab tetap tersimpan saat update</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="market-section section-wrap section-pad" id="marketplace">
+      <div class="market-heading">
+        <div><div class="eyebrow">NEXLAB COMMUNITY MARKET</div><h2>Desain bagus tak harus<br><span>dimulai dari nol.</span></h2><p>Temukan rancangan lab lengkap dari komunitas — atau bagikan karyamu sendiri.</p></div>
+        <div class="market-actions"><button class="button button-outline" id="import-open" type="button">↑ Impor listing</button><button class="button button-primary" id="sell-open" type="button">＋ Jual rancangan</button><input id="import-listing" type="file" accept=".json,application/json" hidden></div>
+      </div>
+      <div class="market-tools">
+        <label class="search-box"><span aria-hidden="true">⌕</span><input id="market-search" type="search" placeholder="Cari topologi, perangkat, atau kebutuhan..." aria-label="Cari rancangan"></label>
+        <label class="sort-select"><span>Urutkan:</span><select id="market-sort" aria-label="Urutkan rancangan"><option value="popular">Paling populer</option><option value="price-low">Harga terendah</option><option value="price-high">Harga tertinggi</option><option value="newest">Terbaru</option></select></label>
+      </div>
+      <div class="category-list" role="group" aria-label="Filter kategori">
+        <button class="category-chip active" data-category="Semua" type="button">Semua desain</button>
+        <button class="category-chip" data-category="Routing" type="button">Routing</button>
+        <button class="category-chip" data-category="FTTH" type="button">FTTH</button>
+        <button class="category-chip" data-category="Enterprise" type="button">Enterprise</button>
+        <button class="category-chip" data-category="Wireless" type="button">Wireless</button>
+        <button class="category-chip" data-category="Pemula" type="button">Pemula</button>
+      </div>
+      <div class="market-grid" id="market-grid" aria-live="polite"></div>
+      <div class="market-empty hidden" id="market-empty"><span>⌕</span><b>Belum ada rancangan yang cocok.</b><p>Coba kata kunci atau kategori lain.</p></div>
+      <div class="market-disclaimer"><span>✦</span><span><b>Berbagi rancangan siap pakai</b> — Listing buatanmu tersimpan di browser. Ekspor paket listing untuk dibagikan dan diimpor di perangkat lain; checkout pembayaran memerlukan tautan layanan pembayaran pada pengaturan.</span></div>
+    </section>
+
+    <section class="donate-section" id="donasi">
+      <div class="section-wrap donate-inner">
+        <div class="donate-emblem" aria-hidden="true"><span>✳</span><i></i><i></i><i></i></div>
+        <div class="donate-copy"><div class="eyebrow">DIBANGUN BERSAMA KOMUNITAS</div><h2>Bantu NexLab tumbuh<br><span>lebih jauh.</span></h2><p>Kontribusimu membantu pengembangan fitur baru, dokumentasi, dan akses belajar jaringan yang lebih terbuka.</p><button class="button button-primary" id="donate-button" type="button">Dukung pengembangan <span aria-hidden="true">↗</span></button><span class="donate-small">Dukungan bersifat sukarela · Terima kasih sudah mampir.</span></div>
+        <div class="donate-stats"><div><b>Open learning</b><span>Belajar dengan praktik</span></div><div><b>Community first</b><span>Dibangun untuk berbagi</span></div><div><b>Terus bertumbuh</b><span>Setiap dukungan berarti</span></div></div>
+      </div>
+    </section>
+
+    <section class="cta-strip section-wrap"><div><span class="eyebrow">IDE BESAR DIMULAI DARI SATU LAB</span><h2>Jaringan berikutnya bisa jadi <span>karyamu.</span></h2></div><a class="button button-light" href="#download">Mulai eksplorasi <span>↗</span></a></section>
+  </main>
+
+  <footer class="site-footer"><div class="section-wrap footer-main"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span><span>Nex<span>Lab</span></span></a><p>Ruang aman untuk membangun<br>jaringan yang lebih baik.</p><div class="footer-links"><a href="#fitur">Fitur</a><a href="#download">Download</a><a href="#marketplace">Marketplace</a><a href="#donasi">Dukung project</a></div></div><div class="section-wrap footer-bottom"><span>© <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.</span><a href="../README.md" target="_blank" rel="noreferrer">Dokumentasi aplikasi ↗</a></div></footer>
+
+  <dialog class="detail-dialog" id="detail-dialog" aria-labelledby="detail-title"></dialog>
+  <dialog class="sell-dialog" id="sell-dialog" aria-labelledby="sell-title">
+    <form id="sell-form">
+      <div class="dialog-heading"><div><div class="eyebrow">KREATOR MARKETPLACE</div><h2 id="sell-title">Bagikan rancanganmu.</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button></div>
+      <p class="dialog-intro">Tambahkan berkas lab .nexlab.json, lalu simpan listing. Listing dan lampirannya tersimpan di browser ini, dan bisa dibagikan lewat tombol ekspor.</p>
+      <label class="form-field">Nama rancangan<input name="title" required maxlength="70" placeholder="Contoh: Enterprise 3 cabang dengan OSPF"></label>
+      <div class="form-row"><label class="form-field">Kategori<select name="category"><option>Routing</option><option>FTTH</option><option>Enterprise</option><option>Wireless</option><option>Pemula</option></select></label><label class="form-field">Harga (Rp)<input name="price" type="number" min="0" step="1000" value="25000" required></label></div>
+      <label class="form-field">Deskripsi singkat<textarea name="description" rows="3" maxlength="220" required placeholder="Apa yang dipelajari dari rancangan ini?"></textarea></label>
+      <label class="form-field">File rancangan .nexlab.json<input name="design" type="file" accept=".json,application/json" required></label>
+      <div class="form-message" id="sell-message" role="status"></div>
+      <div class="dialog-actions"><button class="button button-quiet" type="button" data-close-dialog>Batal</button><button class="button button-primary" type="submit">Simpan pratinjau</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

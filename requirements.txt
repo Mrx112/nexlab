@@ -1,0 +1,3 @@
+aiohttp>=3.9
+# opsional: console SSH ke perangkat fisik
+asyncssh>=2.14
