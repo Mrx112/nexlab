@@ -5,6 +5,6 @@ window.NEXLAB_SITE_CONFIG = {
     macos: "https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-macOS.command",
     linux: "https://github.com/Mrx112/nexlab/releases/latest/download/NexLab-Setup-Linux.sh"
   },
-  donateUrl: "",
+  donateUrl: "https://saweria.co/AdiSusilo112",
   checkoutUrl: ""
 };
