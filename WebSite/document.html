@@ -105,20 +105,15 @@
       <h2>Instalasi</h2>
       <p>Panduan instalasi cepat:</p>
       <ul>
-        <li><b>Windows 10/11</b> — Unduh <code>nexlab-windows-x64.exe</code>, jalankan installer, ikuti langkah verifikasi SHA-256.</li>
-        <li><b>macOS (Intel & Apple Silicon)</b> — Unduh <code>nexlab-macos.dmg</code>, buka, dan seret NexLab ke folder Applications.</li>
-        <li><b>Linux (x86_64)</b> — Unduh paket <code>.tar.gz</code> atau jalankan <code>install.sh</code> untuk instalasi dari sumber.</li>
+        <li><b>Windows 10/11</b> — Unduh dan jalankan <code>NexLab-Setup-Windows.cmd</code>, ikuti langkah verifikasi SHA-256.</li>
+        <li><b>macOS (Intel &amp; Apple Silicon)</b> — Unduh dan jalankan <code>NexLab-Setup-macOS.command</code>, pilih Open saat diminta.</li>
+        <li><b>Linux (x86_64)</b> — Unduh dan jalankan <code>NexLab-Setup-Linux.sh</code>.</li>
       </ul>
+      <p>Setiap installer diunduh dari <a href="index.html#download">halaman download NexLab</a> dan secara otomatis memasang aplikasi beserta shortcut. File yang diunduh adalah paket rilis yang terverifikasi, bukan kode sumber.</p>
       <p>Setelah instalasi, jalankan NexLab dari shortcut aplikasi atau folder instalasi. Server backend akan otomatis berjalan dan membuka antarmuka di browser.</p>
 
-      <h3>Instalasi dari Sumber (Linux/macOS)</h3>
-      <pre><code>git clone https://github.com/Mrx112/nexlab.git
-cd nexlab
-pip install -r requirements.txt
-python run.py --open</code></pre>
-
       <div class="callout">
-        <b>Penting:</b> Pastikan Python 3.10+ terpasang. Backend menggunakan <a href="https://docs.aiohttp.org/" target="_blank">aiohttp</a> dan <a href="https://asyncssh.readthedocs.io/" target="_blank">asyncssh</a> (opsional, untuk koneksi SSH ke perangkat fisik).
+        <b>Penting:</b> Pastikan Python 3.10+ tersedia bila menjalankan dari sumber. Backend menggunakan <a href="https://docs.aiohttp.org/" target="_blank">aiohttp</a> dan <a href="https://asyncssh.readthedocs.io/" target="_blank">asyncssh</a> (opsional, untuk koneksi SSH ke perangkat fisik).
       </div>
     </section>
 

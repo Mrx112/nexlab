@@ -101,7 +101,7 @@ Setiap kabel antar node real dibuat sebagai Linux bridge (STP/CDP/LLDP diteruska
 
 ## Kebutuhan
 
-- Linux apa saja (Ubuntu/Debian/Mint/Fedora, juga Raspberry Pi), Python 3.9+.
+- Linux apa saja (Ubuntu/Debian/Mint/Fedora, juga Raspberry Pi). Python sudah termasuk di installer, tidak perlu dipasang terpisah.
 - Mode simulasi: ±60 MB RAM, tanpa root.
 - Mode real: root, `iproute2`; untuk VM: `qemu-system-x86`, `qemu-utils`, sebaiknya CPU dengan KVM.
 
@@ -109,7 +109,7 @@ Setiap kabel antar node real dibuat sebagai Linux bridge (STP/CDP/LLDP diteruska
 
 Installer unduhan berbeda untuk setiap OS. Buat tag versi dengan format `vMAJOR.MINOR.PATCH` untuk menjalankan [.github/workflows/release.yml](./.github/workflows/release.yml). Setelah build Windows, macOS Intel/Apple Silicon, dan Linux berhasil, GitHub Actions menerbitkan paket aplikasi beserta SHA-256 dan installer ke [GitHub Releases](https://github.com/Mrx112/nexlab/releases). Build desktop harus dijalankan pada runner OS tujuan; jangan mengemas virtual environment atau database developer.
 
-Website statis di folder `WebSite/` diterbitkan melalui GitHub Pages dari branch `master` oleh [.github/workflows/pages.yml](./.github/workflows/pages.yml). Bila GitHub Pages belum pernah diaktifkan, workflow meminta izin `pages: write` untuk menyiapkannya. Tombol unduhan menggunakan aset release terbaru:
+Website statis di folder `WebSite/` diterbitkan melalui GitHub Pages dari branch `master` oleh [.github/workflows/pages.yml](./.github/workflows/pages.yml). Unduh installer NexLab langsung dari [nexlab.web.app#download](https://nexlab.web.app#download) — installer sudah termasuk Python, jadi tidak perlu instalasi manual Python atau dependensi tambahan:
 
 - Windows x64: unduh `NexLab-Setup-Windows.cmd`, kemudian klik ganda. Installer mengambil paket dan skrip Windows dari GitHub Releases, memeriksa SHA-256, memasang aplikasi di `%LOCALAPPDATA%\Programs\NexLab`, membuat shortcut Desktop/Start Menu, lalu menjalankan NexLab.
 - macOS Intel dan Apple Silicon: unduh `NexLab-Setup-macOS.command`, lalu jalankan `bash ~/Downloads/NexLab-Setup-macOS.command` dari Terminal (sesuaikan folder unduhan). Installer memilih paket sesuai arsitektur, memeriksa SHA-256, memasang `NexLab.app` di `~/Applications`, membuat alias Desktop, lalu membukanya. Aplikasi belum ditandatangani atau dinotariskan.
@@ -127,7 +127,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.3.2`, termasuk ikon NexLab baru untuk executable dan shortcut Windows. Setelah rilis `v1.3.2` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer Windows dari halaman rilis.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.4.1`, termasuk splash screen animasi, suara, dan efek elektronik. Setelah rilis `v1.4.1` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman rilis.
 
 ### Instalasi dari source (developer/server)
 

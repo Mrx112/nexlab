@@ -155,4 +155,5 @@ const UI = {
   ellipse: _ui('<ellipse cx="12" cy="12" rx="9" ry="6.5"/>'),
   line: _ui('<path d="M5 19L19 5"/>'),
   image: _ui('<rect x="3" y="5" width="18" height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>'),
+  gift: _ui('<path d="M12 2v4M8 6h8M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8M9 6V4a3 3 0 0 1 6 0v2M9 6a3 3 0 1 0 6 0 3 3 0 0 1-6 0z"/>', 1),
 };

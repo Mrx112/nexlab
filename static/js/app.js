@@ -248,12 +248,13 @@ const App = {
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('act', a.dataset.nav === page));
     const v = document.getElementById('view');
     v.className = 'page'; v.style.padding = '';
-    document.title = (this.pub?.title || 'NexLab') + ({ system: ' — Status sistem', users: ' — Manajemen user', help: ' — Panduan' }[page] || '');
+    document.title = (this.pub?.title || 'NexLab') + ({ system: ' — Status sistem', users: ' — Manajemen user', help: ' — Panduan', donate: ' — Donasi' }[page] || '');
     if (page === 'lab' && arg) { v.style.padding = '0'; v.style.display = 'flex'; this.editor = new Editor(v, arg); document.querySelector('.topbar').classList.add('hidden'); return; }
     v.style.display = ''; document.querySelector('.topbar').classList.remove('hidden');
     if (page === 'system') return this.pageSystem(v);
     if (page === 'users') return this.pageUsers(v);
     if (page === 'help') return Guide.page(v);
+    if (page === 'donate') return this.pageDonate(v);
     return this.pageLabs(v);
   },
 
@@ -604,6 +605,21 @@ arp -a | cls | help</pre>
       m.querySelector('#bPw').onclick = async () => { if (await this.api('POST', '/api/me/password', { old: m.querySelector('#pwOld').value, new: m.querySelector('#pwNew').value })) { this.toast('Password diganti'); close(); } };
       m.querySelector('#bLogout').onclick = () => { close(); this.logout(); };
     });
+  },
+  pageDonate(v) {
+    v.innerHTML = `<div class="page-head"><div><h2>Donasi</h2><p>Bantu dukung pengembangan NexLab.</p></div></div>
+    <div class="panel">
+      <label class="field"><input type="radio" name="method" value="saweria" required> <b>Saweria</b></label>
+      <label class="field"><input type="radio" name="method" value="paypal"> <b>PayPal</b></label>
+      <div class="modal-foot"><button class="btn primary" id="donateSubmit">Buka</button></div>
+    </div>`;
+    v.querySelector('#donateSubmit').onclick = () => {
+      const sel = v.querySelector('input[name="method"]:checked');
+      if (!sel) { this.toast('Pilih platform donasi'); return; }
+      const urls = { saweria: 'https://saweria.co/AdiSusilo112', paypal: 'https://paypal.me/adimr112' };
+      window.open(urls[sel.value], '_blank');
+      location.hash = '#/labs';
+    };
   },
 };
 App.boot();
