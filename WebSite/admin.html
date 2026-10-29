@@ -7,11 +7,28 @@
   <meta name="description" content="NexLab public release and download statistics dashboard.">
   <title>NexLab — Administrator dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+  .admin-lock { position:fixed; inset:0; background:rgba(8,10,16,0.92); display:flex; align-items:center; justify-content:center; z-index:9999; }
+  .admin-login { background:#14182a; border:1px solid #4a4e6a; border-radius:8px; padding:32px; width:90%; max-width:340px; text-align:center; }
+  .admin-login h2 { color:#e9ebf5; margin-bottom:8px; }
+  .admin-login p { color:#959eb2; font-size:13px; margin-bottom:18px; }
+  .admin-login input { width:100%; padding:10px 12px; background:#0b0e17; border:1px solid #3a3f5c; border-radius:6px; color:#e9ebf5; font-size:14px; margin-bottom:14px; }
+  .admin-login-error { color:#ff6b6b; font-size:13px; min-height:18px; }
+  </style>
   <script src="support-crypto.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
-<body class="admin-page">
+  <body class="admin-page">
+  <div id="admin-lock" class="admin-lock hidden">
+    <div class="admin-login">
+      <h2>Administrator Login</h2>
+      <p>Masukkan sandi untuk mengakses dasbor.</p>
+      <input type="password" id="admin-password" autocomplete="current-password" placeholder="Sandi" maxlength="64">
+      <button class="button button-primary" id="admin-login-btn" type="button">Masuk</button>
+      <div class="admin-login-error" id="admin-login-error" role="alert"></div>
+    </div>
+  </div>
   <header class="admin-topbar">
     <a class="brand" href="index.html">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span>
@@ -30,7 +47,7 @@
         <button class="admin-nav" type="button" data-panel="feedback">✉ <span>Feedback inbox</span></button>
         <a class="admin-nav" href="index.html">↗ <span>Back to website</span></a>
       </nav>
-      <div class="admin-sidebar-note">Public release metrics are read-only. Feedback messages require unlocking the private key in this browser; no server-side admin account is provided.</div>
+      <div class="admin-sidebar-note">Public release metrics are read-only. Feedback is sent directly to admin via email; no encryption key management required.</div>
     </aside>
     <main class="admin-content">
       <div class="admin-heading">

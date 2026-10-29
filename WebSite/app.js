@@ -564,32 +564,25 @@
     const submit = document.querySelector("#feedback-submit");
     const message = document.querySelector("#feedback-message");
     const values = new FormData(form);
-    const feedback = {
-      createdAt: new Date().toISOString(),
-      method: null,
-      contact: String(values.get("contact") || "").trim(),
-      message: String(values.get("message") || "").trim()
-    };
+    const contact = String(values.get("contact") || "").trim();
+    const feedbackMsg = String(values.get("message") || "").trim();
     submit.disabled = true;
     message.textContent = "";
     try {
-      if (!feedback.message) throw new Error("Pesan untuk admin wajib diisi.");
-      if (!config.feedbackPublicKey) throw new Error("Fitur pesan terenkripsi belum disiapkan admin.");
-      const encrypted = await window.NexLabSupportCrypto.encryptFeedback(feedback, config.feedbackPublicKey);
-      const file = {
-        format: window.NexLabSupportCrypto.feedbackFormat,
-        version: 1,
-        submissions: [encrypted]
-      };
-      const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `nexlab-feedback-${encrypted.id}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      message.textContent = "File masukan terenkripsi berhasil dibuat. Kirim file ini ke admin lewat kanal terpisah.";
+      if (!feedbackMsg) throw new Error("Pesan untuk admin wajib diisi.");
+      if (!config.feedbackEmail) throw new Error("Alamat email admin belum dikonfigurasi.");
+      const subject = encodeURIComponent("NexLab Feedback");
+      const body = encodeURIComponent(
+        "Nama/Kontak: " + (contact || "(anonim)") + "\n\n" +
+        "Pesan:\n" + feedbackMsg + "\n\n" +
+        "---\nKirim dari NexLab Feedback"
+      );
+      const mailtoUrl = "mailto:" + encodeURIComponent(config.feedbackEmail) +
+        "?subject=" + subject + "&body=" + body;
+      window.location.href = mailtoUrl;
+      message.textContent = "Klien email Anda akan terbuka. Pastikan untuk mengirimkan.";
     } catch (error) {
-      console.error("Masukan terenkripsi tidak dapat dibuat.", error);
+      console.error("Masukan tidak dapat dikirim.", error);
       message.textContent = error.message;
     } finally {
       submit.disabled = false;

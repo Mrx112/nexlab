@@ -1,4 +1,39 @@
 (() => {
+  const ADMIN_PASSWORD = "Mr_112211";
+  const lock = document.querySelector("#admin-lock");
+  const loginBtn = document.querySelector("#admin-login-btn");
+  const loginError = document.querySelector("#admin-login-error");
+
+  function checkAuth() {
+    const authed = sessionStorage.getItem("nexlab_admin_authed") === "1";
+    if (authed) {
+      lock.classList.add("hidden");
+      document.body.classList.add("admin-authed");
+      return true;
+    }
+    lock.classList.remove("hidden");
+    document.body.classList.remove("admin-authed");
+    return false;
+  }
+
+  loginBtn.addEventListener("click", () => {
+    const pw = document.querySelector("#admin-password").value;
+    if (pw === ADMIN_PASSWORD) {
+      sessionStorage.setItem("nexlab_admin_authed", "1");
+      checkAuth();
+    } else {
+      loginError.textContent = "Sandi salah.";
+      document.querySelector("#admin-password").value = "";
+      document.querySelector("#admin-password").focus();
+    }
+  });
+
+  document.querySelector("#admin-password").addEventListener("keypress", e => {
+    if (e.key === "Enter") loginBtn.click();
+  });
+
+  if (!checkAuth()) return;
+
   const repository = "Mrx112/nexlab";
   const endpoint = `https://api.github.com/repos/${repository}/releases?per_page=100`;
   const status = document.querySelector("#admin-status");
