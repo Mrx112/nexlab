@@ -127,7 +127,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Push kode ke `master`, lalu buat/push tag versi yang sama dengan versi aplikasi, saat ini `v1.3.0`; setelah workflow release selesai, rilis dapat dipasang langsung dari aplikasi Windows.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.3.1`, termasuk pembaruan pengelolaan dan uji koneksi perangkat fisik dari Windows. Setelah perubahan disetujui dan digabung ke `master`, rilis `v1.3.1` perlu dipublikasikan; kemudian admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer Windows dari halaman rilis.
 
 ### Instalasi dari source (developer/server)
 
