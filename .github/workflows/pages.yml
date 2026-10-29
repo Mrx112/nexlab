@@ -3,7 +3,7 @@ name: Publish NexLab website
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - "WebSite/**"
       - ".github/workflows/pages.yml"
