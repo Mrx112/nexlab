@@ -11,7 +11,8 @@ __pycache__/
 
 /WebSite/bg/*.png
 /animasi/*.png
-/animasi/*.mp4
+# animasi/*.mp4 is intentionally NOT ignored to allow committing the splash video
+
 **/nexlab-feedback-private-key*.json
 
 .pytest_cache/
