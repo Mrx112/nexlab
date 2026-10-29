@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexLab - Memuat...</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#000; }
+  #splash { width:100vw; height:100vh; display:block; }
+  #overlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.9) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Segoe UI',system-ui,sans-serif; color:#fff;
+    text-align:center; pointer-events:none;
+  }
+  #overlay h1 { font-size:2.5em; font-weight:300; letter-spacing:0.1em; text-shadow:0 0 30px rgba(0,255,180,0.5); }
+  #overlay p { font-size:1.2em; opacity:0.7; margin-top:1em; }
+</style>
+</head>
+<body>
+<canvas id="splash"></canvas>
+<div id="overlay">
+  <div>
+    <h1 id="text"></h1>
+    <p id="subtext"></p>
+  </div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('splash');
+  const ctx = canvas.getContext('2d');
+  const TEXT = 'Memulai Aplikasi';
+  const SUBTEXT = 'NexLab v1.3.2';
+  const TOTAL_FRAMES = 240;
+  const FPS = 24;
+  const FRAME_MS = 1000 / FPS;
+  const ANIM_MS = TOTAL_FRAMES * FRAME_MS;
+
+  let frame = 1;
+  let lastTS = 0;
+  let animDone = false;
+  let voicesLoaded = false;
+  let serverReady = false;
+  const images = {};
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    ctx.scale(dpr, dpr);
+  }
+
+  function framePath(n) {
+    return '/animasi/' + String(n).padStart(5, '0') + '.png';
+  }
+
+  function preloadBatch(start, end, cb) {
+    let left = end - start + 1;
+    if (left <= 0) { cb(); return; }
+    for (let i = start; i <= end; i++) {
+      const img = new Image();
+      img.src = framePath(i);
+      images[i] = img;
+      img.onload = () => {
+        left--;
+        if (left <= 0) cb();
+      };
+      img.onerror = () => {
+        left--;
+        if (left <= 0) cb();
+      };
+    }
+  }
+
+  function render(ts) {
+    if (!lastTS) lastTS = ts;
+    const elapsed = ts - lastTS;
+    if (elapsed >= FRAME_MS) {
+      lastTS = ts;
+      frame++;
+      if (frame > TOTAL_FRAMES) {
+        frame = TOTAL_FRAMES;
+        animDone = true;
+      }
+    }
+    const img = images[frame];
+    if (img && img.complete) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cw = canvas.width / (window.devicePixelRatio || 1);
+      const ch = canvas.height / (window.devicePixelRatio || 1);
+      const ratio = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+      const dw = img.naturalWidth * ratio;
+      const dh = img.naturalHeight * ratio;
+      const dx = (cw - dw) / 2;
+      const dy = (ch - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+    if (!animDone) requestAnimationFrame(render);
+  }
+
+  function speak() {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const utterThis = new SpeechSynthesisUtterance(TEXT);
+    function pickVoice() {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        setTimeout(pickVoice, 100);
+        return;
+      }
+      let maleVoice = voices.find(v => /david|mark|alex|daniel|felix|thomas|hans|enrico|bernar/i.test(v.name));
+      if (!maleVoice) maleVoice = voices.find(v => v.name.includes('Male') || v.name.includes('male'));
+      if (!maleVoice) maleVoice = voices.find(v => v.lang.startsWith('en-')) || voices[0];
+      utterThis.voice = maleVoice;
+    }
+    pickVoice();
+    utterThis.rate = 0.9;
+    utterThis.pitch = 0.8;
+    utterThis.volume = 1;
+    utterThis.onend = () => {};
+    speechSynthesis.speak(utterThis);
+  }
+
+  function startSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.12;
+      masterGain.connect(audioCtx.destination);
+
+      const bass = audioCtx.createOscillator();
+      const bassGain = audioCtx.createGain();
+      bass.type = 'sawtooth';
+      bass.frequency.value = 60;
+      bassGain.gain.value = 0.4;
+      bass.connect(bassGain);
+      const bassFilter = audioCtx.createBiquadFilter();
+      bassFilter.type = 'lowpass';
+      bassFilter.frequency.value = 180;
+      bassGain.connect(bassFilter);
+      bassFilter.connect(masterGain);
+
+      const pad = audioCtx.createOscillator();
+      const padGain = audioCtx.createGain();
+      pad.type = 'sine';
+      pad.frequency.value = 196.00;
+      padGain.gain.value = 0.3;
+      pad.connect(padGain);
+      const padFilter = audioCtx.createBiquadFilter();
+      padFilter.type = 'lowpass';
+      padFilter.frequency.value = 600;
+      padGain.connect(padFilter);
+      padFilter.connect(masterGain);
+
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.07;
+      lfoGain.gain.value = 250;
+      lfo.connect(lfoGain);
+      lfoGain.connect(padFilter.frequency);
+
+      const noise = audioCtx.createBufferSource();
+      const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 3, audioCtx.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseBuffer.length; i++) {
+        noiseData[i] = Math.random() * 2 - 1;
+      }
+      noise.buffer = noiseBuffer;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setTargetAtTime(0.15, audioCtx.currentTime);
+      noise.connect(noiseGain);
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 1200;
+      noiseFilter.Q = 1;
+      noiseGain.connect(noiseFilter);
+      noiseFilter.connect(masterGain);
+      const noiseLFO = audioCtx.createOscillator();
+      const noiseLFOGain = audioCtx.createGain();
+      noiseLFO.type = 'sine';
+      noiseLFO.frequency.value = 0.15;
+      noiseLFOGain.gain.value = 300;
+      noiseLFO.connect(noiseLFOGain);
+      noiseLFOGain.connect(noiseFilter.frequency);
+
+      bass.start();
+      pad.start();
+      lfo.start();
+      noiseLFO.start();
+      noise.start();
+      noise.stop(audioCtx.currentTime + 3);
+
+      masterGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      masterGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+
+      setTimeout(() => {
+        bass.stop(audioCtx.currentTime + 1);
+        pad.stop(audioCtx.currentTime + 1);
+        lfo.stop(audioCtx.currentTime + 1);
+        noiseLFO.stop(audioCtx.currentTime + 1);
+        noiseFilter.disconnect();
+      }, 3000);
+    } catch(e) {}
+  }
+
+  function checkServer() {
+    if (serverReady) return;
+    fetch('/api/system', {cache: 'no-store'})
+      .then(r => {
+        if (r.ok) {
+          serverReady = true;
+          proceed();
+        } else {
+          setTimeout(checkServer, 300);
+        }
+      })
+      .catch(() => setTimeout(checkServer, 300));
+  }
+
+  function proceed() {
+    window.location.href = '/';
+  }
+
+  function init() {
+    resize();
+    window.addEventListener('resize', resize);
+
+    const h1 = document.getElementById('text');
+    const p = document.getElementById('subtext');
+    let i = 0;
+    function typeH1() {
+      if (i <= TEXT.length) {
+        h1.textContent = TEXT.slice(0, i);
+        i++;
+        setTimeout(typeH1, 120);
+      } else {
+        p.textContent = SUBTEXT;
+        setTimeout(() => {
+          speak();
+          startSound();
+        }, 300);
+      }
+    }
+    typeH1();
+
+    preloadBatch(1, 30, () => {
+      preloadBatch(31, 80, () => {
+        requestAnimationFrame(render);
+      });
+    });
+
+    setTimeout(checkServer, 500);
+    setTimeout(() => { if (!serverReady) checkServer(); }, 1000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

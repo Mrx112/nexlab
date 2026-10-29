@@ -65,7 +65,7 @@
     ordered.forEach(record => {
       const row = document.createElement("tr");
       createCell(row, formatDateTime(record.createdAt));
-      createCell(row, record.method === "saweria" ? "Saweria" : "PayPal");
+      createCell(row, record.method === "saweria" ? "Saweria" : record.method === "paypal" ? "PayPal" : "—");
       createCell(row, record.contact || "—");
       createCell(row, record.message);
       rows.append(row);
@@ -278,7 +278,7 @@
         }
         for (const encrypted of bundle.submissions) {
           const record = await window.NexLabSupportCrypto.decryptFeedback(encrypted, feedbackPrivateKey);
-          if (!record || !["saweria", "paypal"].includes(record.method) ||
+          if (!record || (record.method && !["saweria", "paypal", null].includes(record.method)) ||
             typeof record.message !== "string" || !record.message.trim() || record.message.length > 3000 ||
             typeof record.contact !== "string" || record.contact.length > 160 ||
             !Number.isFinite(Date.parse(record.createdAt))) {

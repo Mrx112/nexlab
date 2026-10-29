@@ -1,0 +1,3 @@
+# Placeholder - animation PNG frames are added during the build process
+# The animasi/*.png pattern in .gitignore excludes the large PNG files from git
+# These frames are included in the application bundle via scripts/build-app.py --add-data

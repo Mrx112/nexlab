@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description" content="Dokumentasi lengkap aplikasi NexLab — fitur, instalasi, topologi jaringan, dan troubleshooting."/>
+  <title>NexLab — Documentasi</title>
+  <style>
+    :root {
+      --bg: #0b0e17;
+      --bg-elev: #121725;
+      --text: #e9ebf5;
+      --muted: #959eb2;
+      --violet: #a190ff;
+      --border: rgba(195,205,255,.12);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: ui-font-sans, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header.doc-header { padding: 24px 32px; border-bottom: 1px solid var(--border); background: var(--bg-elev); }
+    header.doc-header a.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; font-weight: 700; font-size: 18px; }
+    nav.doc-nav { padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--bg-elev); position: sticky; top: 0; z-index: 10; }
+    nav.doc-nav ul { display: flex; flex-wrap: wrap; gap: 24px; list-style: none; padding: 12px 0; }
+    nav.doc-nav a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; transition: color .2s; }
+    nav.doc-nav a:hover { color: var(--text); }
+    nav.doc-nav a.active { color: var(--violet); border-bottom: 2px solid var(--violet); }
+    main.doc-main { max-width: 840px; margin: 0 auto; padding: 48px 32px 80px; }
+    h1 { font-size: 36px; letter-spacing: -.8px; margin-bottom: 28px; }
+    h2 { font-size: 24px; margin: 42px 0 18px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h2:first-of-type { margin-top: 0; }
+    h3 { font-size: 17px; margin: 24px 0 10px; color: var(--text); }
+    p { margin-bottom: 16px; color: #cdd5e0; font-size: 15px; }
+    code { font-family: "Fira Code", "Courier New", monospace; background: rgba(161,144,255,.12); padding: 2px 6px; border-radius: 4px; color: var(--violet); font-size: 13px; }
+    pre { background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 16px 0; }
+    pre code { background: none; padding: 0; color: #cdd5e0; }
+    ul { margin: 12px 0 16px 24px; }
+    li { margin-bottom: 6px; }
+    .doc-figure { text-align: center; margin: 28px 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); }
+    .doc-figure img { max-width: 100%; border-radius: 6px; }
+    .doc-figure figcaption { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    table.doc-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    table.doc-table th, table.doc-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+    table.doc-table th { background: var(--bg-elev); color: var(--muted); font-weight: 600; }
+    table.doc-table code { background: rgba(0,0,0,.3); }
+    .callout { border: 1px solid rgba(161,144,255,.3); background: rgba(161,144,255,.06); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+    .callout.warning { border-color: rgba(245,126,139,.3); background: rgba(245,126,139,.06); }
+    .callout code { color: #f5ee9d; }
+    .back-link { display: inline-block; margin-top: 32px; color: var(--violet); text-decoration: none; }
+    .back-link:hover { text-decoration: underline; }
+    footer.doc-footer { border-top: 1px solid var(--border); padding: 20px 32px; text-align: center; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <a class="brand" href="index.html">Nex<span>Lab</span></a>
+  </header>
+  <nav class="doc-nav" id="doc-nav">
+    <ul>
+      <a href="#overview" class="active">Gambaran Umum</a>
+      <a href="#fitur">Fitur</a>
+      <a href="#instalasi">Instalasi</a>
+      <a href="#topologi">Topologi & Bridging</a>
+      <a href="#troubleshooting">Pemecahan Masalah</a>
+    </ul>
+  </nav>
+  <main class="doc-main">
+    <h1>Documentasi NexLab</h1>
+
+    <section id="overview">
+      <h2>Gambaran Umum</h2>
+      <p>NexLab adalah laboratorium jaringan interaktif berbasis web yang memungkinkan Anda merancang topologi, belajar konfigurasi, dan menjalankan simulasi jaringan langsung dari browser.</p>
+      <p>Aplikasi NexLab terdiri dari dua komponen utama:</p>
+      <ul>
+        <li><b>Frontend Web</b> — antarmuka pengguna yang dijalankan di browser untuk merancang topologi dan mengakses console perangkat.</li>
+        <li><b>Backend Engine</b> — server Python (aiohttp) yang mengelola simulasi jaringan, console CLI, dan koneksi ke perangkat fisik.</li>
+      </ul>
+    </section>
+
+    <section id="fitur">
+      <h2>Fitur</h2>
+      <h3>Desain Topologi Visual</h3>
+      <p>Seret dan lepas perangkat, sambungkan port, atur VLAN, dan bangun lab sesuai ide Anda tanpa berantakan.</p>
+      <div class="doc-figure">
+        <img src="screenshots/app-topology.png" alt="Antarmuka desain topologi NexLab"/>
+        <figcaption>Antarmuka desainer topologi — tarik perangkat, hubungkan port, dan konfigurasi VLAN.</figcaption>
+      </div>
+
+      <h3>Console Interaktif</h3>
+      <p>Akses console CLI untuk setiap perangkat (Cisco IOS, Huawei, dan lainnya) dengan dukungan mode konfigurasi dan privilege.</p>
+
+      <h3>Simulasi Lengkap</h3>
+      <p>Simulasikan routing (OSPF, BGP, RIP), switching (VLAN, STP), dan layanan jaringan lainnya dengan logika protokol yang akurat.</p>
+      <div class="doc-figure">
+        <img src="screenshots/app-console.png" alt="Console CLI interaktif NexLab"/>
+        <figcaption>Console CLI interaktif — konfigurasi perangkat simulasi seperti perangkat sungguhan.</figcaption>
+      </div>
+
+      <h3>Marketplace Komunitas</h3>
+      <p>Temukan rancangan lab siap pakai dari komunitas, atau jual rancangan Anda sendiri.</p>
+
+      <h3>Pemetaan 3D & Instalasi Fisik</h3>
+      <p>Rencanakan instalasi lapangan nyata dengan peta 3D, jalur kabel, daftar material, dan kalkulasi link budget.</p>
+    </section>
+
+    <section id="instalasi">
+      <h2>Instalasi</h2>
+      <p>Panduan instalasi cepat:</p>
+      <ul>
+        <li><b>Windows 10/11</b> — Unduh <code>nexlab-windows-x64.exe</code>, jalankan installer, ikuti langkah verifikasi SHA-256.</li>
+        <li><b>macOS (Intel & Apple Silicon)</b> — Unduh <code>nexlab-macos.dmg</code>, buka, dan seret NexLab ke folder Applications.</li>
+        <li><b>Linux (x86_64)</b> — Unduh paket <code>.tar.gz</code> atau jalankan <code>install.sh</code> untuk instalasi dari sumber.</li>
+      </ul>
+      <p>Setelah instalasi, jalankan NexLab dari shortcut aplikasi atau folder instalasi. Server backend akan otomatis berjalan dan membuka antarmuka di browser.</p>
+
+      <h3>Instalasi dari Sumber (Linux/macOS)</h3>
+      <pre><code>git clone https://github.com/Mrx112/nexlab.git
+cd nexlab
+pip install -r requirements.txt
+python run.py --open</code></pre>
+
+      <div class="callout">
+        <b>Penting:</b> Pastikan Python 3.10+ terpasang. Backend menggunakan <a href="https://docs.aiohttp.org/" target="_blank">aiohttp</a> dan <a href="https://asyncssh.readthedocs.io/" target="_blank">asyncssh</a> (opsional, untuk koneksi SSH ke perangkat fisik).
+      </div>
+    </section>
+
+    <section id="topologi">
+      <h2>Topologi & Bridging</h2>
+      <p>NexLab mendukung dua mode jaringan:</p>
+      <table class="doc-table">
+        <thead>
+          <tr><th>Fitur</th><th>Simulasi</th><th>Real</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Lingkup jaringan</td><td>192.168.1.0/24 (virtual)</td><td>192.168.137.0/24 (fisik host)</td></tr>
+          <tr><td>Interface utama</td><td>virbr0 (Linux/macOS)</td><td>vEthernet (Windows) / bridge0 (macOS)</td></tr>
+          <tr><td>Bridge ke host</td><td>Tidak</td><td>Ya (opsional)</td></tr>
+          <tr><td>Penggunaan</td><td>Belajar & eksperimen mandiri</td><td>Integrasi dengan jaringan fisik</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Menghubungkan ke Jaringan Fisik</h3>
+      <p>Mode <b>real</b> memungkinkan perangkat simulasi berkomunikasi dengan perangkat fisik di jaringan lokal host:</p>
+
+      <h4>Linux</h4>
+      <pre><code>sudo ip link set enp0s3 promisc on
+sudo ip link set tap0 up
+sudo ip link set tap0 master br0</code></pre>
+
+      <h4>Windows</h4>
+      <pre><code>netsh interface set interface "Ethernet" admin=enabled
+netsh advfirewall firewall add rule name="NexLab ICMP" dir=in action=allow protocol=icmpv4
+netsh interface ipv4 add address "vEthernet (Default Switch)" 192.168.137.1 255.255.255.0</code></pre>
+
+      <h4>macOS</h4>
+      <pre><code>sudo ifconfig bridge0 create
+sudo ifconfig bridge0 addm en0
+sudo ifconfig bridge0 up</code></pre>
+
+      <div class="callout warning">
+        <b>Catatan:</b> Bridging memerlukan hak istimewa administrator. Pada Windows, pastikan <a href="https://learn.microsoft.com/windows-server/networking/technologies/remote-access/wdv-configure-remote-access-desktop" target="_blank">ICS (Internet Connection Sharing)</a> diaktifkan agar perangkat virtual dapat mengakses internet.
+      </div>
+
+      <h3>Spanning Tree (PortFast)</h3>
+      <p>Port yang menghubungkan ke host fisik akan secara otomatis di-setup sebagai PortFast agar tidak ada delay pembelajaran MAC saat bridging:</p>
+      <pre><code>interface GigabitEthernet0/1
+ spanning-tree portfast
+ spanning-tree bpduguard enable</code></pre>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Pemecahan Masalah</h2>
+      <h3>Port tidak dapat terhubung</h3>
+      <p>Pastikan port berstatus <code>LISTENING</code> atau <code>LEARNING</code> sebelum beralih ke <code>FORWARDING</code>. Jika stuck, periksa subnet otomatis dan pastikan tidak ada konflik IP.</p>
+
+      <h3>Bridge fisik tidak berfungsi</h3>
+      <p>Pastikan firewall mengizinkan ICMP dan protokol lainnya. Di Windows gunakan aturan firewall di atas; di Linux pastikan <code>iptables</code> tidak memblokir paket.</p>
+
+      <h3>ARP tidak merespons</h3>
+      <p>Di mode <b>real</b>, Pastikan ARP request dari node virtual di-broadcast ke jaringan fisik melalui TAP interface dengan mode promiscuous yang benar.</p>
+    </section>
+
+    <a class="back-link" href="index.html">← Kembali ke Beranda</a>
+  </main>
+
+  <footer class="doc-footer">
+    © <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+    const sections = document.querySelectorAll("section[id], h2[id]");
+    const nav = document.getElementById("doc-nav");
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const link = nav.querySelector(`a[href="#${entry.target.id}"]`);
+        if (link) link.classList.toggle("active", entry.isIntersecting && entry.intersectionRatio >= 0.5);
+      });
+    }, { threshold: [0.3, 0.6, 0.9] });
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>

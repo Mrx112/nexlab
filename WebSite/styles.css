@@ -265,6 +265,8 @@ dialog::backdrop { background: rgba(4,6,12,.76); backdrop-filter: blur(5px); }
 .detail-disclaimer { margin: 12px 0 0; color: #768095; font-size: 9px; }
 .sell-dialog { width: min(530px, calc(100% - 28px)); max-height: 90vh; overflow-y: auto; }
 .sell-dialog form { padding: 24px; }
+.donation-grid { display: grid; gap: 10px; }
+.donation-grid .button { min-height: 42px; font-size: 11px; justify-content: center; }
 .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
 .dialog-heading h2 { margin: 7px 0 0; font: 600 25px var(--display); letter-spacing: -.8px; }
 .dialog-close { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid rgba(195,205,255,.16); border-radius: 8px; background: rgba(11,14,24,.7); color: #b9c0d0; font-size: 21px; cursor: pointer; }
