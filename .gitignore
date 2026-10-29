@@ -10,6 +10,8 @@ __pycache__/
 !/data/.gitkeep
 
 /WebSite/bg/*.png
+/animasi/*.png
+/animasi/*.mp4
 **/nexlab-feedback-private-key*.json
 
 .pytest_cache/

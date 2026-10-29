@@ -6,6 +6,8 @@ DNS and the path of a packet (ping / traceroute / telnet / ssh).
 Everything is calculated on demand from the lab state, so it costs almost no
 CPU or RAM when idle.
 """
+import time
+
 from .state import (ip2i, i2ip, mask_len, len_mask, net_of, bcast_of, in_net,
                     classful_len, valid_ip, mac_for)
 
@@ -14,6 +16,9 @@ ROUTER = {'router', 'firewall'}
 HOST = {'pc', 'laptop', 'server', 'printer', 'ipphone', 'iot', 'tablet', 'smartphone', 'cctv'}
 HUB = {'cloud', 'hub', 'ap', 'odp', 'ont'}          # passive / always-on L2 segments
 SIM = SWITCH | ROUTER | HOST | HUB
+
+STP_LISTEN_SEC = 15
+STP_LEARN_SEC = 15
 
 
 def L3(n, i):
@@ -160,6 +165,28 @@ class Net:
             return False
         return self.wifi_ok(nid, base, pn, pi)
 
+    def _port_stp_state(self, nid, ifn):
+        """Simulated STP port state: listening → learning → forwarding.
+
+        Non-switch ports always forward.  Switch ports transition based on how
+        long the node has been running.
+        """
+        t = self.t(nid)
+        if t not in SWITCH:
+            return 'forwarding'
+        if ifn.startswith(('Vlan', 'Loopback')) or '.' in ifn:
+            return 'forwarding'
+        elapsed = time.time() - self.rt.started_at(nid)
+        if elapsed < STP_LISTEN_SEC:
+            return 'listening'
+        if elapsed < STP_LISTEN_SEC + STP_LEARN_SEC:
+            return 'learning'
+        return 'forwarding'
+
+    def port_forwarding(self, nid, ifn):
+        """True when the port is past STP listening/learning and can forward."""
+        return self._port_stp_state(nid, ifn) == 'forwarding'
+
     def wifi_ok(self, a, ai, b, bi):
         """Wireless link: client SSID/key must match the access point."""
         for ap, api, cl, cli in ((a, ai, b, bi), (b, bi, a, ai)):
@@ -211,6 +238,9 @@ class Net:
             return 'administratively down', 'down'
         if self.l3_up(nid, ifn) or (self.t(nid) in SWITCH and not ifn.startswith(('Vlan', 'Loopback'))
                                     and self.link_up(nid, ifn)):
+            if self.t(nid) in SWITCH and not ifn.startswith(('Vlan', 'Loopback')) and '.' not in ifn \
+                    and not self.port_forwarding(nid, ifn):
+                return 'up', 'down'
             return 'up', 'up'
         if ifn.startswith('Vlan') and str(ifn[4:]) in self.st(nid)['vlans']:
             return 'up', 'down'
@@ -262,6 +292,8 @@ class Net:
             if a[0] not in self.nodes or b[0] not in self.nodes:
                 continue
             if not self.link_up(*a):
+                continue
+            if self.t(a[0]) in SWITCH and not self.port_forwarding(a[0], a[1]):
                 continue
             ca, cb = self.channels(*a), self.channels(*b)
             for ch, p in ca.items():
@@ -541,6 +573,23 @@ class Net:
                         res = self._dhcp_serve(f['dst_node'], e['ip'], e['ln'], host)
                         if res:
                             return res
+        return self._dhcp_fallback(host, d)
+
+    def _dhcp_fallback(self, host, dom):
+        """Auto-assign an IP from the directly connected subnet when no DHCP
+        server or helper is found."""
+        for e in self.eps():
+            if e['dom'] != dom or e['nid'] == host:
+                continue
+            net = net_of(e['ip'], e['ln'])
+            bc = bcast_of(e['ip'], e['ln'])
+            used = {x['ip'] for x in self.eps()} | {e['ip'], i2ip(net), i2ip(bc)}
+            for v in range(net + 1, bc):
+                ip = i2ip(v)
+                if ip not in used:
+                    s = self.st(host)
+                    dns = s.get('dns') or e.get('dns') or ''
+                    return dict(ip=ip, mask=len_mask(e['ln']), gw=e['ip'], dns=dns, server=e['nid'])
         return None
 
     def _dhcp_serve(self, srv, giaddr, ln, client):

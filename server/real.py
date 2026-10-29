@@ -591,7 +591,7 @@ class RealManager:
         for br, devs in want.items():
             if br not in mine:
                 sh('ip', 'link', 'add', 'name', br, 'type', 'bridge')
-                sh('ip', 'link', 'set', br, 'type', 'bridge', 'stp_state', '0', 'group_fwd_mask', '65528')
+                sh('ip', 'link', 'set', br, 'type', 'bridge', 'stp_state', '0', 'group_fwd_mask', '65535')
                 sh('ip', 'link', 'set', br, 'up')
                 mine.add(br)
             for d in devs:

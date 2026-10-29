@@ -27,6 +27,7 @@ def build(output_directory):
         '--workpath', str(work_directory),
         '--specpath', str(spec_directory),
         '--add-data', f'{ROOT / "static"}{os.pathsep}static',
+        '--add-data', f'{ROOT / "animasi"}{os.pathsep}animasi',
         '--collect-submodules', 'server',
         '--collect-submodules', 'asyncssh',
         '--collect-all', 'aiohttp',

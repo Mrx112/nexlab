@@ -94,7 +94,7 @@ def main():
 
         async def _later():
             await asyncio.sleep(1.0)
-            webbrowser.open(f'{scheme}://localhost:{a.port}/')
+            webbrowser.open(f'{scheme}://localhost:{a.port}/splash.html')
 
         async def _open(_app):
             _app['open_task'] = asyncio.ensure_future(_later())

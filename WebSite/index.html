@@ -30,7 +30,9 @@
       <a href="#fitur">Fitur</a>
       <a href="#download">Download</a>
       <a href="#marketplace">Marketplace</a>
-      <a href="#donasi">Dukung project</a>
+      <a href="#donasi">Donasi</a>
+      <a href="#feedback">Feedback</a>
+      <a href="document.html">Documentasi</a>
     </nav>
     <label class="language-picker"><span data-i18n>Language</span><select id="language-select" aria-label="Language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select></label>
     <a class="button button-small button-outline header-cta" href="#download">Mulai gratis <span aria-hidden="true">↗</span></a>
@@ -147,7 +149,7 @@
     <section class="donate-section" id="donasi">
       <div class="section-wrap donate-inner">
         <div class="donate-emblem" aria-hidden="true"><span>✳</span><i></i><i></i><i></i></div>
-        <div class="donate-copy"><div class="eyebrow">DIBANGUN BERSAMA KOMUNITAS</div><h2>Bantu NexLab tumbuh<br><span>lebih jauh.</span></h2><p>Kontribusimu membantu pengembangan fitur baru, dokumentasi, dan akses belajar jaringan yang lebih terbuka.</p><button class="button button-primary" id="support-open" type="button">Dukung project & kirim masukan <span aria-hidden="true">↗</span></button><span class="donate-small">Dukungan bersifat sukarela · Terima kasih sudah mampir.</span></div>
+        <div class="donate-copy"><div class="eyebrow">DIBANGUN BERSAMA KOMUNITAS</div><h2>Bantu NexLab tumbuh<br><span>lebih jauh.</span></h2><p>Kontribusimu membantu pengembangan fitur baru, dokumentasi, dan akses belajar jaringan yang lebih terbuka.</p><button class="button button-primary" id="donate-open" type="button">Donasi sekaran <span aria-hidden="true">↗</span></button><button class="button button-outline button-small" id="feedback-open" type="button">Kirim masukan <span aria-hidden="true">↗</span></button><span class="donate-small">Dukungan bersifat sukarela · Terima kasih sudah mampir.</span></div>
         <div class="donate-stats"><div><b>Open learning</b><span>Belajar dengan praktik</span></div><div><b>Community first</b><span>Dibangun untuk berbagi</span></div><div><b>Terus bertumbuh</b><span>Setiap dukungan berarti</span></div></div>
       </div>
     </section>
@@ -155,19 +157,27 @@
     <section class="cta-strip section-wrap"><div><span class="eyebrow">IDE BESAR DIMULAI DARI SATU LAB</span><h2>Jaringan berikutnya bisa jadi <span>karyamu.</span></h2></div><a class="button button-light" href="#download">Mulai eksplorasi <span>↗</span></a></section>
   </main>
 
-  <footer class="site-footer"><div class="section-wrap footer-main"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span><span>Nex<span>Lab</span></span></a><p>Ruang aman untuk membangun<br>jaringan yang lebih baik.</p><div class="footer-links"><a href="#fitur">Fitur</a><a href="#download">Download</a><a href="#marketplace">Marketplace</a><a href="#donasi">Dukung project</a><a href="admin.html">Administrator</a></div></div><div class="section-wrap footer-bottom"><span>© <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.</span><a href="../README.md" target="_blank" rel="noreferrer">Dokumentasi aplikasi ↗</a></div></footer>
+  <footer class="site-footer"><div class="section-wrap footer-main"><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg></span><span>Nex<span>Lab</span></span></a><p>Ruang aman untuk membangun<br>jaringan yang lebih baik.</p><div class="footer-links"><a href="#fitur">Fitur</a><a href="#download">Download</a><a href="#marketplace">Marketplace</a><a href="#donasi">Donasi</a><a href="#feedback">Feedback</a><a href="document.html">Documentasi</a><a href="admin.html">Administrator</a></div></div><div class="section-wrap footer-bottom"><span>© <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.</span><a href="../README.md" target="_blank" rel="noreferrer">Dokumentasi aplikasi ↗</a></div></footer>
 
   <dialog class="detail-dialog" id="detail-dialog" aria-labelledby="detail-title"></dialog>
-  <dialog class="sell-dialog" id="support-dialog" aria-labelledby="support-title">
-    <form id="support-form">
-      <div class="dialog-heading"><div><div class="eyebrow">DUKUNG NEXLAB</div><h2 id="support-title">Pilih donasi & kirim masukan.</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button></div>
+  <dialog class="sell-dialog" id="donate-dialog" aria-labelledby="donate-title">
+    <form id="donate-form">
+      <div class="dialog-heading"><div><div class="eyebrow">Dukung Pengembangan</div><h2 id="donate-title">Pilih metode donasi.</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button></div>
+      <p class="dialog-intro">Dukungan bersifat sukarela. Pilih layanan pembayaran favoritmu di bawah ini.</p>
+      <div class="donation-grid">
+        <a class="button button-primary donation-link" id="donation-saweria" href="#" target="_blank" rel="noopener noreferrer">Saweria <span aria-hidden="true">↗</span></a>
+        <a class="button button-outline donation-link" id="donation-paypal" href="#" target="_blank" rel="noopener noreferrer">PayPal <span aria-hidden="true">↗</span></a>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="sell-dialog" id="feedback-dialog" aria-labelledby="feedback-title">
+    <form id="feedback-form">
+      <div class="dialog-heading"><div><div class="eyebrow">KIRIM MASUKAN</div><h2 id="feedback-title">Kirim masukan terenkripsi.</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button></div>
       <p class="dialog-intro">Masukan dienkripsi di perangkatmu dan diunduh sebagai file. Kirim file tersebut kepada admin melalui kanal terpisah agar dapat dibuka di dashboard.</p>
-      <label class="form-field">Metode donasi<select name="method" required><option value="saweria">Saweria</option><option value="paypal">PayPal</option></select></label>
       <label class="form-field">Email/kontak <span class="optional">(opsional, terenkripsi)</span><input name="contact" type="text" maxlength="160" autocomplete="email"></label>
       <label class="form-field">Pesan untuk admin<textarea name="message" rows="5" maxlength="3000" required placeholder="Tuliskan masukan, kritik, atau saran untuk NexLab."></textarea></label>
-      <div class="form-message" id="support-message" role="status"></div>
-      <div class="donation-next hidden" id="donation-next"><span>File terenkripsi sudah diunduh.</span><a class="button button-outline" id="donation-link" href="#" target="_blank" rel="noopener noreferrer">Lanjutkan ke donasi <span aria-hidden="true">↗</span></a></div>
-      <div class="dialog-actions"><button class="button button-primary" id="support-submit" type="submit">Enkripsi & unduh masukan</button></div>
+      <div class="form-message" id="feedback-message" role="status"></div>
+      <div class="dialog-actions"><button class="button button-primary" id="feedback-submit" type="submit">Enkripsi & unduh masukan</button></div>
     </form>
   </dialog>
   <dialog class="sell-dialog" id="sell-dialog" aria-labelledby="sell-title">

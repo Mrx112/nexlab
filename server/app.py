@@ -31,6 +31,7 @@ from . import ai
 
 BASE = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(BASE, 'static')
+ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
 VERSION = '1.3.2'
@@ -1107,6 +1108,10 @@ async def index(req):
     return web.FileResponse(os.path.join(STATIC, 'index.html'), headers={'Cache-Control': 'no-cache'})
 
 
+async def splash(req):
+    return web.FileResponse(os.path.join(STATIC, 'splash.html'), headers={'Cache-Control': 'no-cache'})
+
+
 def build_app(data_dir, port=8080):
     app = web.Application(middlewares=[guard], client_max_size=20 * 1024 * 1024)
     app['db'] = DB(os.path.join(data_dir, 'nexlab.db'))
@@ -1116,6 +1121,7 @@ def build_app(data_dir, port=8080):
     app['port'] = port
     r = app.router
     r.add_get('/', index)
+    r.add_get('/splash.html', splash)
     r.add_get('/api/public', public)
     r.add_post('/api/register', register)
     r.add_post('/api/login', login)
@@ -1159,6 +1165,7 @@ def build_app(data_dir, port=8080):
     r.add_get('/api/admin/running', admin_running)
     r.add_get('/ws/console/{lid}/{nid}', ws_console)
     r.add_static('/static/', STATIC, append_version=False)
+    r.add_static('/animasi/', ANIMASI, append_version=False)
 
     async def on_start(app):
         app['loop_task'] = asyncio.ensure_future(app['mgr'].loop())

@@ -20,7 +20,7 @@ fi
 IPS=$(ip -4 -o addr show dev "$NIC" | awk '{print $4}')
 GW=$(ip route show default dev "$NIC" | awk '{print $3}' | head -1)
 ip link add name "$BR" type bridge
-ip link set "$BR" type bridge stp_state 0 group_fwd_mask 65528 2>/dev/null || true
+ip link set "$BR" type bridge stp_state 0 group_fwd_mask 65535 2>/dev/null || true
 ip link set "$BR" up
 ip link set "$NIC" master "$BR"
 for a in $IPS; do ip addr del "$a" dev "$NIC"; ip addr add "$a" dev "$BR"; done
