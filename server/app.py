@@ -34,7 +34,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
