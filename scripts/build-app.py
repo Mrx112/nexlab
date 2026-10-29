@@ -14,6 +14,12 @@ def build(output_directory):
     output_directory.mkdir(parents=True, exist_ok=True)
     work_directory = ROOT / 'build' / 'pyinstaller'
     spec_directory = ROOT / 'build' / 'spec'
+    icon_path = ROOT / 'build' / 'nexlab.ico'
+    if sys.platform == 'win32':
+        subprocess.check_call(
+            [sys.executable, str(ROOT / 'scripts' / 'create-icon.py'), '--output', str(icon_path)],
+            cwd=ROOT,
+        )
     args = [
         sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean',
         '--name', 'NexLab', '--onedir', '--console',
@@ -29,6 +35,8 @@ def build(output_directory):
         '--add-data', f'{ROOT / "installers" / "windows" / "update.ps1"}{os.pathsep}installers/windows',
         'run.py',
     ]
+    if sys.platform == 'win32':
+        args[args.index('run.py'):args.index('run.py')] = ['--icon', str(icon_path)]
     subprocess.check_call(args, cwd=ROOT)
     application_directory = output_directory / 'NexLab'
     if not application_directory.is_dir():
@@ -65,8 +73,8 @@ def create_macos_app(application_directory, app_bundle):
             'CFBundleName': 'NexLab',
             'CFBundleDisplayName': 'NexLab',
             'CFBundleIdentifier': 'id.nexlab.desktop',
-            'CFBundleVersion': '1.3.1',
-            'CFBundleShortVersionString': '1.3.1',
+            'CFBundleVersion': '1.3.2',
+            'CFBundleShortVersionString': '1.3.2',
             'CFBundlePackageType': 'APPL',
             'CFBundleExecutable': launcher.name,
             'NSHighResolutionCapable': True,

@@ -28,6 +28,10 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path "dist\NexLab\NexLab.exe")) { throw "NexLab.exe was not built." }
+          if (-not (Test-Path "build\nexlab.ico")) { throw "NexLab Windows icon was not generated." }
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path "dist\NexLab\NexLab.exe").Path)
+          if (-not $icon) { throw "NexLab.exe does not contain an application icon." }
           if (-not (Test-Path "dist\NexLab\_internal\static\index.html")) { throw "Packaged static/index.html is missing." }
           if (-not (Test-Path "dist\NexLab\_internal\installers\windows\install.ps1")) { throw "Windows installer script is missing." }
           if (-not (Test-Path "dist\NexLab\_internal\installers\windows\update.ps1")) { throw "Windows updater script is missing." }

@@ -115,7 +115,7 @@ Website statis di folder `WebSite/` diterbitkan melalui GitHub Pages dari branch
 - macOS Intel dan Apple Silicon: unduh `NexLab-Setup-macOS.command`, lalu jalankan `bash ~/Downloads/NexLab-Setup-macOS.command` dari Terminal (sesuaikan folder unduhan). Installer memilih paket sesuai arsitektur, memeriksa SHA-256, memasang `NexLab.app` di `~/Applications`, membuat alias Desktop, lalu membukanya. Aplikasi belum ditandatangani atau dinotariskan.
 - Linux x86_64: unduh `NexLab-Setup-Linux.sh`, kemudian jalankan `bash ~/Downloads/NexLab-Setup-Linux.sh` (sesuaikan folder unduhan). Installer memeriksa SHA-256, memasang aplikasi untuk akun pengguna tanpa root, membuat pintasan menu dan Desktop bila tersedia, lalu menjalankannya. Jika perlu, pasang `curl`, `tar`, `sha256sum`/`shasum`, dan `pgrep` dari package manager distro.
 
-Paket aplikasi membawa NexLab dan aset `static/`, serta tidak memerlukan instalasi Python terpisah. Pemutakhiran mengganti file aplikasi saja dan meminta pengguna menutup NexLab terlebih dahulu. Database, akun, konfigurasi, dan lab pengguna tidak disertakan di paket rilis dan tidak dihapus saat aplikasi diperbarui:
+Paket aplikasi membawa NexLab dan aset `static/`, serta tidak memerlukan instalasi Python terpisah. Installer Windows menyertakan ikon NexLab pada executable, sehingga shortcut Desktop dan Start Menu menampilkan ikon yang sama. Pemutakhiran mengganti file aplikasi saja dan meminta pengguna menutup NexLab terlebih dahulu. Database, akun, konfigurasi, dan lab pengguna tidak disertakan di paket rilis dan tidak dihapus saat aplikasi diperbarui:
 
 - Windows: `%LOCALAPPDATA%\NexLab\data`
 - macOS: `~/Library/Application Support/NexLab/data`
@@ -127,7 +127,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.3.1`, termasuk pembaruan pengelolaan dan uji koneksi perangkat fisik dari Windows. Setelah perubahan disetujui dan digabung ke `master`, rilis `v1.3.1` perlu dipublikasikan; kemudian admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer Windows dari halaman rilis.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.3.2`, termasuk ikon NexLab baru untuk executable dan shortcut Windows. Setelah rilis `v1.3.2` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer Windows dari halaman rilis.
 
 ### Instalasi dari source (developer/server)
 
