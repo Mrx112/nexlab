@@ -7,20 +7,23 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { width:100%; height:100%; overflow:hidden; background:#000; }
-  #splash { width:100vw; height:100vh; display:block; }
+  #splash {
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    object-fit:contain; z-index:1;
+  }
   #overlay {
     position:fixed; top:0; left:0; width:100%; height:100%;
-    background:radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.9) 100%);
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
     display:flex; align-items:center; justify-content:center;
     font-family:'Segoe UI',system-ui,sans-serif; color:#fff;
-    text-align:center; pointer-events:none;
+    text-align:center; pointer-events:none; z-index:2;
   }
   #overlay h1 { font-size:2.5em; font-weight:300; letter-spacing:0.1em; text-shadow:0 0 30px rgba(0,255,180,0.5); }
   #overlay p { font-size:1.2em; opacity:0.7; margin-top:1em; }
 </style>
 </head>
 <body>
-<canvas id="splash"></canvas>
+<video id="splash" playsinline autoplay muted preload="auto" src="/animasi/animasi.mp4"></video>
 <div id="overlay">
   <div>
     <h1 id="text"></h1>
@@ -29,76 +32,12 @@
 </div>
 <script>
 (() => {
-  const canvas = document.getElementById('splash');
-  const ctx = canvas.getContext('2d');
+  const video = document.getElementById('splash');
   const TEXT = 'Memulai Aplikasi';
   const SUBTEXT = 'NexLab v1.3.2';
-  const TOTAL_FRAMES = 240;
-  const FPS = 24;
-  const FRAME_MS = 1000 / FPS;
-  const ANIM_MS = TOTAL_FRAMES * FRAME_MS;
 
-  let frame = 1;
-  let lastTS = 0;
   let animDone = false;
-  let voicesLoaded = false;
   let serverReady = false;
-  const images = {};
-
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    ctx.scale(dpr, dpr);
-  }
-
-  function framePath(n) {
-    return '/animasi/' + String(n).padStart(5, '0') + '.png';
-  }
-
-  function preloadBatch(start, end, cb) {
-    let left = end - start + 1;
-    if (left <= 0) { cb(); return; }
-    for (let i = start; i <= end; i++) {
-      const img = new Image();
-      img.src = framePath(i);
-      images[i] = img;
-      img.onload = () => {
-        left--;
-        if (left <= 0) cb();
-      };
-      img.onerror = () => {
-        left--;
-        if (left <= 0) cb();
-      };
-    }
-  }
-
-  function render(ts) {
-    if (!lastTS) lastTS = ts;
-    const elapsed = ts - lastTS;
-    if (elapsed >= FRAME_MS) {
-      lastTS = ts;
-      frame++;
-      if (frame > TOTAL_FRAMES) {
-        frame = TOTAL_FRAMES;
-        animDone = true;
-      }
-    }
-    const img = images[frame];
-    if (img && img.complete) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cw = canvas.width / (window.devicePixelRatio || 1);
-      const ch = canvas.height / (window.devicePixelRatio || 1);
-      const ratio = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
-      const dw = img.naturalWidth * ratio;
-      const dh = img.naturalHeight * ratio;
-      const dx = (cw - dw) / 2;
-      const dy = (ch - dh) / 2;
-      ctx.drawImage(img, dx, dy, dw, dh);
-    }
-    if (!animDone) requestAnimationFrame(render);
-  }
 
   function speak() {
     if (!('speechSynthesis' in window)) return;
@@ -119,7 +58,6 @@
     utterThis.rate = 0.9;
     utterThis.pitch = 0.8;
     utterThis.volume = 1;
-    utterThis.onend = () => {};
     speechSynthesis.speak(utterThis);
   }
 
@@ -221,13 +159,16 @@
   }
 
   function proceed() {
+    if (!animDone) return;
     window.location.href = '/';
   }
 
-  function init() {
-    resize();
-    window.addEventListener('resize', resize);
+  function onVideoEnd() {
+    animDone = true;
+    if (serverReady) proceed();
+  }
 
+  function init() {
     const h1 = document.getElementById('text');
     const p = document.getElementById('subtext');
     let i = 0;
@@ -246,10 +187,10 @@
     }
     typeH1();
 
-    preloadBatch(1, 30, () => {
-      preloadBatch(31, 80, () => {
-        requestAnimationFrame(render);
-      });
+    video.addEventListener('ended', onVideoEnd);
+    video.addEventListener('error', () => {
+      animDone = true;
+      if (serverReady) proceed();
     });
 
     setTimeout(checkServer, 500);
