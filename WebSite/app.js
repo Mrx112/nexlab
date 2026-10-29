@@ -547,16 +547,20 @@
       input.value = "";
     }
   });
-  document.querySelector("#donate-button").addEventListener("click", () => {
-    if (config.donateUrl) {
+  document.querySelectorAll("[data-donation]").forEach(button => {
+    button.addEventListener("click", () => {
+      const method = button.dataset.donation;
+      const destination = config[`${method}Url`];
+      if (!destination) {
+        showToast(`Tautan donasi ${method} belum dikonfigurasi di WebSite/config.js.`);
+        return;
+      }
       try {
-        window.open(getConfiguredWebUrl(config.donateUrl).href, "_blank", "noopener,noreferrer");
+        window.open(getConfiguredWebUrl(destination).href, "_blank", "noopener,noreferrer");
       } catch (error) {
         showToast(`URL donasi tidak valid: ${error.message}`);
       }
-    } else {
-      showToast("Kanal donasi belum dikonfigurasi. Isi donateUrl di WebSite/config.js.");
-    }
+    });
   });
   document.querySelectorAll("[data-download]").forEach(link => {
     const destination = config.downloads?.[link.dataset.download];
