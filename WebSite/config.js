@@ -7,5 +7,6 @@ window.NEXLAB_SITE_CONFIG = {
   },
   saweriaUrl: "https://saweria.co/AdiSusilo112",
   paypalUrl: "https://paypal.me/adimr112",
+  feedbackPublicKey: null,
   checkoutUrl: ""
 };

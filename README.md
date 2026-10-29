@@ -199,6 +199,12 @@ Katalog bawaan ditandai sebagai contoh. Kreator dapat menyimpan listing beserta 
 
 Website dibuat oleh Adi Susilo / Creator.
 
+### Masukan terenkripsi dan dashboard admin
+
+Form dukungan mengenkripsi pesan di browser dengan kunci publik dan mengunduh satu file JSON per masukan. Dalam mode statis GitHub Pages yang dipilih, file **tidak dikirim otomatis ke GitHub atau database**; pengirim harus menyampaikan file kepada admin lewat kanal terpisah. Di `WebSite/admin.html`, admin membuat pasangan kunci, menetapkan kata sandi minimal 12 karakter, lalu memasukkan nilai kunci publik ke `feedbackPublicKey` pada `WebSite/config.js`. Simpan file kunci pribadi terenkripsi secara offline dan buat cadangan. Jangan commit file kunci pribadi; `.gitignore` mengecualikan berkas hasil unduhan bernama `nexlab-feedback-private-key*.json`.
+
+Untuk membaca masukan, admin membuka dashboard, mengunggah file kunci pribadi dan memasukkan kata sandinya, lalu mengimpor satu atau beberapa file masukan. Dashboard menampilkan waktu, metode donasi, kontak, dan pesan dalam tabel. Data hanya didekripsi di browser dan tetap di memori sampai halaman ditutup atau kotak masuk dikosongkan; tanggal berasal dari perangkat pengirim, bukan waktu server terverifikasi. File JSON masukan berisi ciphertext, sedangkan metadata pesan dilindungi enkripsi AES-GCM dengan kunci yang dibungkus RSA-OAEP. Mode ini bukan database tersinkronisasi dan tidak menyediakan autentikasi server-side.
+
 ## Tangkapan layar dan showcase
 
 Berikut tampilan NexLab saat digunakan: editor topologi demo, pemantauan sistem dengan pemeriksaan update, serta website promosi dan dashboard statistik publik GitHub. Dashboard hanya menampilkan data rilis/unduhan publik; kunjungan website tidak dilacak.

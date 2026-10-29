@@ -10,6 +10,7 @@ __pycache__/
 !/data/.gitkeep
 
 /WebSite/bg/*.png
+**/nexlab-feedback-private-key*.json
 
 .pytest_cache/
 .ruff_cache/

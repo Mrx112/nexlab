@@ -225,8 +225,8 @@ h1, h2 { font-family: var(--display); letter-spacing: -2.5px; }
 .donate-emblem i:nth-of-type(1) { top: 9px; right: 31px; }.donate-emblem i:nth-of-type(2) { bottom: 19px; left: 2px; }.donate-emblem i:nth-of-type(3) { right: 2px; bottom: 29px; }
 .donate-copy h2 { font-size: clamp(34px, 3.5vw, 45px); }
 .donate-copy > p { max-width: 475px; margin: 12px 0 20px; color: #a0a7ba; font-size: 12px; line-height: 1.8; }
-.donate-options { display: flex; flex-wrap: wrap; gap: 10px; }
-.donate-options .button { min-height: 43px; }
+.donate-copy > .button { min-height: 43px; }
+.donation-next { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; color: var(--mint); font-size: 10px; }
 .donate-small { display: block; margin-top: 10px; color: #71798c; font-size: 9px; }
 .donate-stats { display: grid; gap: 0; border-left: 1px solid rgba(195,205,255,.12); }
 .donate-stats > div { padding: 12px 0 12px 20px; border-bottom: 1px solid rgba(195,205,255,.09); }
@@ -370,6 +370,13 @@ dialog::backdrop { background: rgba(4,6,12,.76); backdrop-filter: blur(5px); }
 .admin-metric > span, .admin-metric small { color: var(--muted); font-size: 10px; }
 .admin-metric > b { color: var(--mint); font: 600 22px var(--display); }
 .admin-card { overflow: hidden; margin-bottom: 15px; }
+.admin-card-body { padding: 17px 18px; }
+.admin-card-body > p { color: var(--muted); font-size: 10px; line-height: 1.7; }
+.admin-card-body code { color: #c5c2ff; }
+.admin-inline-status { min-height: 16px; }
+.admin-key-output { width: 100%; margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: #0d111c; color: #d4d8e6; font: 10px var(--mono); overflow-wrap: anywhere; resize: vertical; }
+#feedback-rows td:last-child { white-space: normal; min-width: 220px; overflow-wrap: anywhere; }
+#feedback-rows td:nth-child(1) { min-width: 170px; }
 .admin-card-heading { display: flex; align-items: start; justify-content: space-between; gap: 15px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
 .admin-card-heading h2 { margin: 0 0 3px; font: 600 15px var(--display); letter-spacing: -.3px; }
 .admin-card-heading a, .admin-release-item a, .admin-table a, .admin-footer a { color: var(--mint); font-size: 10px; }

@@ -7,6 +7,7 @@
   <meta name="description" content="NexLab public release and download statistics dashboard.">
   <title>NexLab — Administrator dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="support-crypto.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
@@ -26,9 +27,10 @@
         <button class="admin-nav active" type="button" data-panel="overview">◫ <span>Overview</span></button>
         <button class="admin-nav" type="button" data-panel="downloads">↓ <span>Downloads</span></button>
         <button class="admin-nav" type="button" data-panel="releases">◷ <span>Releases</span></button>
+        <button class="admin-nav" type="button" data-panel="feedback">✉ <span>Feedback inbox</span></button>
         <a class="admin-nav" href="index.html">↗ <span>Back to website</span></a>
       </nav>
-      <div class="admin-sidebar-note">Read-only public repository data. No visitor tracking or private account controls are enabled.</div>
+      <div class="admin-sidebar-note">Public release metrics are read-only. Feedback messages require unlocking the private key in this browser; no server-side admin account is provided.</div>
     </aside>
     <main class="admin-content">
       <div class="admin-heading">
@@ -54,6 +56,48 @@
       </section>
       <section class="admin-panel" data-panel-content="releases">
         <section class="admin-card"><div class="admin-card-heading"><div><h2>Published releases</h2><p>Version tags and publication dates.</p></div></div><div class="admin-release-list" id="release-list"><p>Loading…</p></div></section>
+      </section>
+      <section class="admin-panel" data-panel-content="feedback">
+        <section class="admin-card">
+          <div class="admin-card-heading"><div><h2>Encryption key setup</h2><p>Create an encryption key pair once. The private key is password-protected and must never be published.</p></div></div>
+          <div class="admin-card-body">
+            <label class="form-field">New private-key password<input id="new-key-password" type="password" minlength="12" autocomplete="new-password" placeholder="Use at least 12 characters"></label>
+            <label class="form-field">Confirm private-key password<input id="new-key-password-confirm" type="password" minlength="12" autocomplete="new-password"></label>
+            <button class="button button-outline" id="generate-feedback-keys" type="button">Generate keys</button>
+            <p class="admin-inline-status" id="key-status" role="status"></p>
+            <div class="hidden" id="generated-key-output">
+              <p>Copy this public key into <code>feedbackPublicKey</code> in <code>WebSite/config.js</code>. Keep the downloaded private-key file offline and backed up.</p>
+              <textarea id="public-key-output" class="admin-key-output" rows="5" readonly aria-label="Public encryption key"></textarea>
+              <button class="button button-outline" id="download-public-key" type="button">Download public key</button>
+            </div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-heading"><div><h2>Unlock feedback inbox</h2><p>Unlock the private key first, then import encrypted feedback files downloaded by visitors.</p></div></div>
+          <div class="admin-card-body">
+            <label class="form-field">Encrypted private-key file<input id="private-key-file" type="file" accept=".json,application/json"></label>
+            <label class="form-field">Private-key password<input id="private-key-password" type="password" autocomplete="current-password"></label>
+            <button class="button button-primary" id="unlock-feedback" type="button">Unlock inbox</button>
+            <p class="admin-inline-status" id="feedback-status" role="status"></p>
+          </div>
+        </section>
+        <div class="hidden" id="feedback-inbox">
+          <section class="admin-card">
+            <div class="admin-card-heading"><div><h2>Import encrypted feedback</h2><p>Choose one or more .json files created by the support form. Files are decrypted locally and are not uploaded.</p></div></div>
+            <div class="admin-card-body">
+              <label class="form-field">Encrypted feedback files<input id="feedback-files" type="file" accept=".json,application/json" multiple></label>
+              <button class="button button-outline" id="import-feedback" type="button">Import files</button>
+              <button class="button button-quiet" id="clear-feedback" type="button">Clear inbox</button>
+              <p class="admin-inline-status">The received time comes from the visitor's device and is not server-verified. Imported messages stay in memory until this page is closed or the inbox is cleared.</p>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead><tr><th>Received (date and time)</th><th>Donation method</th><th>Contact</th><th>Message</th></tr></thead>
+                  <tbody id="feedback-rows"><tr><td colspan="4">No files imported.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
       </section>
       <footer class="admin-footer">NexLab · Software created by Adi Susilo / Creator · <a href="https://github.com/Mrx112/nexlab" target="_blank" rel="noopener noreferrer">GitHub repository ↗</a></footer>
     </main>

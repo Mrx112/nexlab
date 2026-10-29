@@ -547,20 +547,57 @@
       input.value = "";
     }
   });
-  document.querySelectorAll("[data-donation]").forEach(button => {
-    button.addEventListener("click", () => {
-      const method = button.dataset.donation;
+  const supportDialog = document.querySelector("#support-dialog");
+  document.querySelector("#support-open").addEventListener("click", () => {
+    document.querySelector("#support-message").textContent = "";
+    document.querySelector("#donation-next").classList.add("hidden");
+    supportDialog.showModal();
+  });
+  document.querySelector("#support-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = document.querySelector("#support-submit");
+    const message = document.querySelector("#support-message");
+    const values = new FormData(form);
+    const method = values.get("method");
+    const feedback = {
+      createdAt: new Date().toISOString(),
+      method,
+      contact: String(values.get("contact") || "").trim(),
+      message: String(values.get("message") || "").trim()
+    };
+    submit.disabled = true;
+    message.textContent = "";
+    document.querySelector("#donation-next").classList.add("hidden");
+    try {
+      if (!["saweria", "paypal"].includes(method)) throw new Error("Metode donasi tidak valid.");
+      if (!feedback.message) throw new Error("Pesan untuk admin wajib diisi.");
+      if (!config.feedbackPublicKey) throw new Error("Fitur pesan terenkripsi belum disiapkan admin.");
       const destination = config[`${method}Url`];
-      if (!destination) {
-        showToast(`Tautan donasi ${method} belum dikonfigurasi di WebSite/config.js.`);
-        return;
-      }
-      try {
-        window.open(getConfiguredWebUrl(destination).href, "_blank", "noopener,noreferrer");
-      } catch (error) {
-        showToast(`URL donasi tidak valid: ${error.message}`);
-      }
-    });
+      if (!destination) throw new Error(`Tautan donasi ${method} belum dikonfigurasi.`);
+      const donationUrl = getConfiguredWebUrl(destination).href;
+      const encrypted = await window.NexLabSupportCrypto.encryptFeedback(feedback, config.feedbackPublicKey);
+      const file = {
+        format: window.NexLabSupportCrypto.feedbackFormat,
+        version: 1,
+        submissions: [encrypted]
+      };
+      const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `nexlab-feedback-${encrypted.id}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      document.querySelector("#donation-link").href = donationUrl;
+      document.querySelector("#donation-next").classList.remove("hidden");
+      message.textContent = "File masukan terenkripsi berhasil dibuat. Lanjutkan ke metode donasi pilihanmu.";
+    } catch (error) {
+      console.error("Masukan terenkripsi tidak dapat dibuat.", error);
+      message.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
   });
   document.querySelectorAll("[data-download]").forEach(link => {
     const destination = config.downloads?.[link.dataset.download];
