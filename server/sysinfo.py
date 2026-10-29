@@ -1,10 +1,12 @@
 """Cross-platform system information (Linux, Windows, macOS) without extra dependencies."""
 import ctypes
+import ipaddress
 import os
 import re
 import socket
 import subprocess
 import sys
+import time
 
 OS = 'windows' if sys.platform.startswith('win') else 'macos' if sys.platform == 'darwin' else 'linux'
 
@@ -126,6 +128,106 @@ def lan_addresses():
     except Exception:
         pass
     return out
+
+
+def windows_network_info():
+    """Return Windows adapter details and neighbors already present in its ARP cache."""
+    if OS != 'windows':
+        return {'interfaces': [], 'neighbors': [], 'error': ''}
+    kw = {'creationflags': 0x08000000}
+    try:
+        config = subprocess.run(
+            ['ipconfig', '/all'], capture_output=True, text=True,
+            encoding='mbcs', errors='replace', timeout=4, **kw)
+        arp = subprocess.run(
+            ['arp', '-a'], capture_output=True, text=True,
+            encoding='mbcs', errors='replace', timeout=4, **kw)
+        if config.returncode or arp.returncode:
+            return {'interfaces': [], 'neighbors': [], 'error': 'Windows gagal membaca konfigurasi jaringan.'}
+    except (OSError, subprocess.TimeoutExpired):
+        return {'interfaces': [], 'neighbors': [], 'error': 'Informasi jaringan Windows tidak dapat dibaca.'}
+
+    interfaces, adapters_by_ip = [], {}
+    current = None
+    for line in config.stdout.splitlines():
+        if line and not line[0].isspace() and line.rstrip().endswith(':'):
+            name = line.strip().rstrip(':')
+            name = name.replace('Ethernet adapter ', '').replace('Wireless LAN adapter ', 'Wi-Fi ')
+            current = {'name': name, 'description': '', 'status': 'Unknown',
+                       'mac': '', 'bridge': 'bridge' in name.lower(),
+                       'addresses': [], 'gateway': ''}
+            interfaces.append(current)
+        if not current:
+            continue
+        ipv4 = re.search(r'\bIPv4[^:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})', line, re.IGNORECASE)
+        if ipv4 and not _skip(ipv4.group(1)):
+            address = ipv4.group(1)
+            current['addresses'].append(address)
+            current['status'] = 'Up'
+            adapters_by_ip[address] = current['name']
+        mac = re.search(r'(?<![0-9A-F])([0-9A-F]{2}(?:[:-][0-9A-F]{2}){5})(?![0-9A-F])', line, re.IGNORECASE)
+        if mac and not current['mac']:
+            current['mac'] = mac.group(1).replace('-', ':').upper()
+        gateway = re.search(r'\b(?:Default Gateway|Gateway)[^:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})', line, re.IGNORECASE)
+        if gateway and not current['gateway']:
+            current['gateway'] = gateway.group(1)
+        if re.search(r'\bmedia disconnected\b', line, re.IGNORECASE):
+            current['status'] = 'Disconnected'
+
+    neighbors = []
+    current_interface = ''
+    for line in arp.stdout.splitlines():
+        header = re.match(r'^\s*[^:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})\s+---', line)
+        if header:
+            current_interface = adapters_by_ip.get(header.group(1), '')
+            continue
+        entry = re.match(
+            r'^\s*(\d{1,3}(?:\.\d{1,3}){3})\s+([0-9A-F]{2}(?:[:-][0-9A-F]{2}){5})\s+(\S+)',
+            line, re.IGNORECASE)
+        if entry:
+            try:
+                address = ipaddress.IPv4Address(entry.group(1))
+            except ipaddress.AddressValueError:
+                continue
+            if _skip(entry.group(1)) or address.is_multicast or address.is_reserved:
+                continue
+            neighbors.append({
+                'ip': entry.group(1),
+                'mac': entry.group(2).replace('-', ':').upper(),
+                'state': entry.group(3),
+                'interface': current_interface,
+            })
+    return {'interfaces': interfaces, 'neighbors': neighbors, 'error': ''}
+
+
+def ping_host(target):
+    """Send one ICMP echo to a numeric IPv4 address using the host operating system."""
+    try:
+        address = str(ipaddress.IPv4Address(str(target).strip()))
+    except ipaddress.AddressValueError:
+        return {'ok': False, 'target': str(target), 'time_ms': None,
+                'error': 'Masukkan alamat IPv4 yang valid.'}
+
+    if OS == 'windows':
+        args = ['ping', '-n', '1', '-w', '1500', '-4', address]
+    elif OS == 'macos':
+        args = ['ping', '-c', '1', '-W', '1500', '-t', '2', address]
+    else:
+        args = ['ping', '-c', '1', '-W', '2', address]
+    started = time.monotonic()
+    try:
+        kw = {'creationflags': 0x08000000} if OS == 'windows' else {}
+        result = subprocess.run(args, capture_output=True, text=True, errors='replace', timeout=3, **kw)
+    except (OSError, subprocess.TimeoutExpired):
+        return {'ok': False, 'target': address, 'time_ms': None,
+                'error': 'Perintah ping tidak tersedia atau waktu tunggu habis.'}
+    output = result.stdout + result.stderr
+    match = re.search(r'time[=<]\s*(\d+)\s*ms', output, re.IGNORECASE)
+    elapsed = round((time.monotonic() - started) * 1000)
+    ok = result.returncode == 0
+    return {'ok': ok, 'target': address,
+            'time_ms': int(match.group(1)) if match else (elapsed if ok else None),
+            'error': '' if ok else 'Tidak ada balasan ICMP (tujuan tidak aktif atau ping diblokir).'}
 
 
 def os_label():

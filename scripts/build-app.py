@@ -25,6 +25,8 @@ def build(output_directory):
         '--collect-submodules', 'asyncssh',
         '--collect-all', 'aiohttp',
         '--collect-all', 'cryptography',
+        '--add-data', f'{ROOT / "installers" / "windows" / "install.ps1"}{os.pathsep}installers/windows',
+        '--add-data', f'{ROOT / "installers" / "windows" / "update.ps1"}{os.pathsep}installers/windows',
         'run.py',
     ]
     subprocess.check_call(args, cwd=ROOT)
@@ -63,8 +65,8 @@ def create_macos_app(application_directory, app_bundle):
             'CFBundleName': 'NexLab',
             'CFBundleDisplayName': 'NexLab',
             'CFBundleIdentifier': 'id.nexlab.desktop',
-            'CFBundleVersion': '1.2.0',
-            'CFBundleShortVersionString': '1.2.0',
+            'CFBundleVersion': '1.3.0',
+            'CFBundleShortVersionString': '1.3.0',
             'CFBundlePackageType': 'APPL',
             'CFBundleExecutable': launcher.name,
             'NSHighResolutionCapable': True,

@@ -999,10 +999,14 @@ class Editor {
         <div class="field"><label>Target NIC / bridge di server</label><select class="input" data-prop="target"><option value="">— hanya hub simulasi —</option>${ifs.map(i => `<option value="${esc(i.name)}" ${i.name === p.target ? 'selected' : ''}>${esc(i.name)}${i.bridge ? ' (bridge)' : ''}</option>`).join('')}</select></div>
         <div class="tip">Di mode simulasi, Cloud berfungsi sebagai hub. Untuk perangkat sungguhan, pilih NIC kedua yang tersambung ke switch/router fisik, atau bridge seperti <span class="mono">pnet0</span> (lihat Panduan). Jangan memilih NIC utama server kecuali sudah dijadikan bridge.</div>`;
     }
-    if (n.type === 'remote') return `<h5>Perangkat fisik</h5>${inp('host', 'Alamat IP perangkat', 'text', '192.168.1.254')}
+    if (n.type === 'remote') {
+      const hosts = App.sys?.neighbors || [];
+      return `<h5>Perangkat fisik</h5><div class="field"><label>Alamat IP perangkat</label><input class="input mono" data-prop="host" list="remote-ip-${n.id}" value="${esc(p.host ?? '')}" placeholder="192.168.1.254">
+        <datalist id="remote-ip-${n.id}">${hosts.map(h => `<option value="${esc(h.ip)}">${esc([h.interface, h.mac].filter(Boolean).join(' · '))}</option>`).join('')}</datalist></div>
         <div class="row"><div class="field grow"><label>Protokol</label><select class="input" data-prop="protocol">${['telnet', 'ssh'].map(m => `<option ${m === p.protocol ? 'selected' : ''}>${m}</option>`).join('')}</select></div>${inp('port', 'Port', 'number')}</div>
         ${inp('username', 'Username (SSH)')}${inp('ports', 'Nama port (pisahkan koma)', 'text', 'Gi0/0,Gi0/1')}
-        <div class="tip">Console dibuka dari server Linux ke perangkat ini. Bisa juga ke console server/terminal server (mis. port 2001 untuk kabel console fisik).${caps.asyncssh ? '' : ' Untuk SSH pasang dulu: <span class="mono">pip install asyncssh</span>.'}</div>`;
+        <div class="tip">Pilih alamat dari cache neighbor Windows atau masukkan IP sendiri. Console dibuka dari server ke perangkat ini; akses SSH/Telnet tetap bergantung pada konfigurasi dan firewall perangkat.${caps.asyncssh ? '' : ' Untuk SSH pasang dulu: <span class="mono">pip install asyncssh</span>.'}</div>`;
+    }
     return '';
   }
   inspectLink(el, l) {

@@ -1,6 +1,6 @@
 # NexLab — Lab Jaringan Pribadi (ala PNETLab + Packet Tracer)
 
-NexLab adalah aplikasi lab jaringan berbasis web. Server-nya berjalan di komputer **Linux** dengan backend **Python**, lalu diakses dari browser komputer lain (Windows, Mac, HP) lewat IP jaringan server, atau dari internet jika IP server dipublikasikan.
+NexLab adalah aplikasi lab jaringan berbasis web. Server-nya berjalan di komputer **Linux, Windows, atau macOS** dengan backend **Python**, lalu diakses dari browser komputer lain lewat IP jaringan server, atau dari internet jika IP server dipublikasikan.
 
 Dibuat supaya **ringan**: node simulasi (router, switch, firewall, PC) praktis tidak memakan RAM/CPU sehingga laptop lama atau mini PC 2 GB RAM sudah cukup. Untuk lab yang butuh paket sungguhan, tersedia node real (QEMU, Linux host, Cloud bridge) seperti di PNETLab.
 
@@ -11,6 +11,8 @@ Dibuat supaya **ringan**: node simulasi (router, switch, firewall, PC) praktis t
 - Admin bisa mengatur peran, menonaktifkan akun, reset password, dan menutup pendaftaran.
 - Sesi cookie HttpOnly, password di-hash PBKDF2, pembatasan percobaan login, proteksi CSRF.
 - Server listen di `0.0.0.0` sehingga bisa dibuka dari semua IP jaringan yang terhubung; HTTPS opsional.
+- **Jaringan Windows**: halaman Status Sistem menampilkan NIC, alamat IPv4/gateway, dan neighbor yang sudah tercatat di cache ARP. Ping satu IP Windows/LAN atau alamat publik seperti `8.8.8.8`; IP neighbor dapat dipilih untuk konfigurasi node Perangkat Fisik. NexLab tidak melakukan pemindaian subnet.
+- **Pembaruan Windows**: admin dapat memasang rilis GitHub langsung dari Status Sistem. Arsip aplikasi diverifikasi dengan SHA-256; folder `Update` dipakai untuk staging dan file unduhan dibersihkan setelah pemasangan berhasil. Database, lab, image, serta virtualenv instalasi source tetap dipertahankan.
 
 **Editor topologi**
 - Drag & drop perangkat, kabel antar port (pilih interface seperti PNETLab/Packet Tracer), lampu status link (hijau/kuning/merah), label interface, catatan, zoom/pan, menu klik-kanan, autosave.
@@ -112,11 +114,11 @@ Paket aplikasi membawa NexLab dan aset `static/`, serta tidak memerlukan instala
 
 ### Memeriksa update dari aplikasi
 
-Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi dengan GitHub Release stabil terbaru. Jika ada versi baru, NexLab menampilkan installer yang sesuai dengan sistem operasi server dan tautan unduhan. Tutup NexLab, unduh, lalu jalankan installer untuk memperbarui; aplikasi tidak mengganti atau menjalankan file secara diam-diam. Data lab dan akun tetap berada di folder data OS di atas. Pemeriksaan memerlukan koneksi internet dan aset installer pada GitHub Release terbaru.
+Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi dengan GitHub Release stabil terbaru. Di Windows, admin dapat memilih **Pasang update sekarang**; NexLab mengunduh rilis bertag terbaru, memverifikasi SHA-256 untuk paket aplikasi, lalu menutup dan membuka ulang aplikasi setelah update. Arsip sementara ditempatkan di folder `Update` pada folder aplikasi dan dihapus setelah pemasangan berhasil. Instalasi source mempertahankan `.git`, `.venv`, dan `data`; instalasi resmi mempertahankan data pada folder OS di atas. Di macOS/Linux, halaman tetap menyediakan tautan unduhan installer.
 
-Arsip unduhan dan file sementara installer dihapus setelah instalasi berhasil; bila gagal, file diagnostik sementara tetap disimpan dan lokasinya ditampilkan. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
+Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-GitHub Release tidak tersedia sampai tag pertama dibuat dan seluruh job build lulus. Push kode ke `master`, lalu buat/push tag versi yang sama dengan versi aplikasi, saat ini `v1.2.0`; setelah release selesai, ketiga tombol Download dapat mengunduh installer yang benar.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Push kode ke `master`, lalu buat/push tag versi yang sama dengan versi aplikasi, saat ini `v1.3.0`; setelah workflow release selesai, rilis dapat dipasang langsung dari aplikasi Windows.
 
 ### Instalasi dari source (developer/server)
 

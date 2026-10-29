@@ -382,6 +382,13 @@ const App = {
     const c = s.caps, used = s.mem_total - s.mem_avail;
     const yes = b => b ? '<span class="yes">ya</span>' : '<span class="no">tidak</span>';
     const scheme = location.protocol.replace(':', '');
+    const renderNeighbors = neighbors => (neighbors || []).map(n => `<tr><td class="mono">${esc(n.ip)}</td><td class="mono">${esc(n.mac)}</td><td>${esc(n.interface || '—')}</td><td>${esc(n.state)}</td>
+      <td><button class="btn xs" data-ping-ip="${esc(n.ip)}">Ping</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Belum ada perangkat di cache ARP Windows.</td></tr>';
+    const interfaceRows = (c.interfaces || []).map(i => {
+      const addresses = i.addresses || (s.addresses || []).filter(a => a.iface === i.name).map(a => a.ip);
+      return `<tr><td class="mono">${esc(i.name)}</td><td>${esc(i.status || (i.bridge ? 'bridge' : 'NIC'))}</td><td class="mono">${esc(addresses.join(', ') || '—')}</td>
+        <td class="mono">${esc(i.gateway || '—')}</td><td class="mono">${esc(i.mac || '—')}</td></tr>`;
+    }).join('') || (s.addresses || []).map(a => `<tr><td class="mono">${esc(a.iface)}</td><td>NIC</td><td class="mono">${esc(a.ip)}</td><td>—</td><td>—</td></tr>`).join('');
     v.innerHTML = `<div class="page-head"><div><h2>Status sistem</h2><p>Komputer (Linux, Windows atau macOS) yang menjalankan NexLab dan cara mengaksesnya dari perangkat lain.</p></div><span class="grow"></span><button class="btn sm" id="sysRef">${UI.refresh} Refresh</button></div>
     ${this.gauges(s)}
     <div class="cols">
@@ -403,12 +410,46 @@ const App = {
           <dt>Akselerasi VM</dt><dd>${esc(c.accel)}</dd><dt>Jaringan VM</dt><dd>${c.netmode === 'tap' ? 'Linux bridge (bisa bridge ke NIC fisik)' : 'Socket UDP + NAT (tanpa admin)'}</dd>
           <dt>Linux Host (netns)</dt><dd>${yes(c.avail && c.avail.netns)}</dd><dt>SSH ke perangkat (asyncssh)</dt><dd>${yes(c.asyncssh)}</dd></dl>
         <p class="muted" style="font-size:13px">${c.os === 'linux' ? (c.root ? 'Semua fitur real aktif.' : 'Mode simulasi berjalan penuh. Jalankan dengan <span class="mono">sudo ./start.sh</span> untuk bridge ke NIC fisik dan Linux Host.') : 'Simulasi, Peta 3D, panduan dan console Perangkat Fisik berjalan penuh. VM QEMU berjalan dengan jaringan socket; Linux Host dan bridge NIC khusus server Linux.'}</p></section>
+      <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Uji ping jaringan</h3>
+        <p class="muted">Ping satu alamat IPv4 dari komputer yang menjalankan NexLab. Contoh: IP switch/router atau <span class="mono">8.8.8.8</span>.</p>
+        <div class="row"><input class="input mono grow" id="hostPingTarget" inputmode="decimal" placeholder="192.168.1.1 atau 8.8.8.8">
+          <button class="btn sm primary" id="hostPingGo">${UI.ping} Ping</button></div>
+        <p id="hostPingResult" class="muted" role="status" aria-live="polite" style="font-size:13px;margin-bottom:0"></p></section>
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Antarmuka jaringan server</h3>
-        <table class="t"><tr><th>Nama</th><th>Jenis</th></tr>${c.os !== 'linux' ? (s.addresses || []).map(a => `<tr><td class="mono">${esc(a.iface)}</td><td>${esc(a.ip)}</td></tr>`).join('') : ''}${c.interfaces.map(i => `<tr><td class="mono">${esc(i.name)}</td><td>${i.bridge ? 'bridge' : 'NIC'}</td></tr>`).join('') || '<tr><td colspan=2 class="muted">tidak terbaca</td></tr>'}</table></section>
+        <table class="t"><tr><th>Nama</th><th>Status/jenis</th><th>IPv4</th><th>Gateway</th><th>MAC</th></tr>${interfaceRows || '<tr><td colspan="5" class="muted">NIC tidak terbaca</td></tr>'}</table>
+        ${s.network_error ? `<p class="muted">${esc(s.network_error)}</p>` : ''}</section>
+      ${c.os === 'windows' ? `<section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Perangkat terdeteksi Windows (cache ARP)</h3>
+        <p class="muted">Berisi perangkat IPv4 yang sudah pernah terlihat oleh Windows; NexLab tidak memindai seluruh subnet. Ping IP perangkat untuk memperbarui cache. IP ini dapat dipilih sebagai alamat Perangkat Fisik di editor.</p>
+        <div style="overflow:auto"><table class="t"><tr><th>IP</th><th>MAC</th><th>Interface</th><th>Status</th><th></th></tr><tbody id="hostNeighbors">${renderNeighbors(s.neighbors)}</tbody></table></div></section>` : ''}
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Image QEMU</h3>
         ${c.images.length ? `<table class="t"><tr><th>Nama</th><th>File</th></tr>${c.images.map(i => `<tr><td>${esc(i.name)}</td><td class="mono" style="font-size:12px">${esc(i.disks.join(', '))}</td></tr>`).join('')}</table>` : '<p class="muted">Belum ada. Taruh image di <span class="mono">data/images/qemu/&lt;nama&gt;/</span>, contoh <span class="mono">data/images/qemu/vios/vios.qcow2</span>.</p>'}</section>
     </div>`;
     v.querySelector('#sysRef').onclick = () => this.pageSystem(v);
+    const pingInput = v.querySelector('#hostPingTarget'), pingResult = v.querySelector('#hostPingResult');
+    const runHostPing = async target => {
+      const address = (target || pingInput.value).trim();
+      if (!address) { pingResult.textContent = 'Masukkan alamat IPv4 tujuan.'; return; }
+      pingInput.value = address;
+      const button = v.querySelector('#hostPingGo');
+      button.disabled = true;
+      pingResult.textContent = `Ping ${address}…`;
+      const result = await this.api('POST', '/api/network/ping', { target: address });
+      button.disabled = false;
+      if (!result) { pingResult.textContent = 'Ping gagal dijalankan.'; return; }
+      pingResult.innerHTML = result.ok
+        ? `<span class="yes">Berhasil</span> ke ${esc(result.target)} — ${result.time_ms} ms`
+        : `<span class="no">Gagal</span> ke ${esc(result.target || address)}: ${esc(result.error)}`;
+      const neighbors = v.querySelector('#hostNeighbors');
+      if (neighbors) neighbors.innerHTML = renderNeighbors(result.neighbors);
+      if (this.sys) this.sys.neighbors = result.neighbors;
+    };
+    v.querySelector('#hostPingGo').onclick = () => runHostPing();
+    pingInput.onkeydown = event => { if (event.key === 'Enter') runHostPing(); };
+    const neighborTable = v.querySelector('#hostNeighbors');
+    if (neighborTable) neighborTable.onclick = event => {
+      const button = event.target.closest('[data-ping-ip]');
+      if (button) runHostPing(button.dataset.pingIp);
+    };
     v.querySelector('#scanUpdates').onclick = async event => {
       const button = event.currentTarget;
       const result = v.querySelector('#updateResult');
@@ -436,7 +477,22 @@ const App = {
         result.textContent = 'Tautan update dari GitHub tidak valid.';
         return;
       }
-      result.textContent = `Versi ${update.latest_version} tersedia. Unduh installer, tutup NexLab, lalu jalankan installer untuk memperbarui. `;
+      result.textContent = `Versi ${update.latest_version} tersedia. `;
+      if (s.os_id === 'windows' && this.me.role === 'admin') {
+        const install = document.createElement('button');
+        install.className = 'btn sm primary';
+        install.textContent = 'Pasang update sekarang';
+        install.onclick = async () => {
+          if (!confirm(`Pasang NexLab ${update.latest_version}? Server akan ditutup sementara dan dibuka kembali setelah pembaruan. Pada instalasi source, file kode lokal akan diganti; data, .venv, dan .git tetap dipertahankan.`)) return;
+          install.disabled = true;
+          result.append(document.createTextNode(' Menyiapkan update terverifikasi…'));
+          const started = await this.api('POST', '/api/update/install', {});
+          if (started) result.textContent = started.message;
+          else { install.disabled = false; result.textContent = 'Pemasangan update gagal. Periksa koneksi dan folder instalasi, lalu coba lagi.'; }
+        };
+        result.append(install);
+        result.append(document.createTextNode(' '));
+      }
       const link = document.createElement('a');
       link.href = download.href;
       link.target = '_blank';

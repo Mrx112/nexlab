@@ -22,6 +22,8 @@ import struct
 import subprocess
 import sys
 
+from . import sysinfo
+
 try:  # POSIX-only (Linux Host consoles)
     import fcntl
     import termios
@@ -93,6 +95,8 @@ def accel_args():
 
 
 def host_ifaces():
+    if OS == 'windows':
+        return sysinfo.windows_network_info()['interfaces']
     out = []
     try:
         for n in sorted(os.listdir('/sys/class/net')):
@@ -105,7 +109,7 @@ def host_ifaces():
     return out
 
 
-def caps(images_dir):
+def caps(images_dir, interfaces=None):
     qemu = qemu_bin()
     mode = net_mode()
     netns_ok = OS == 'linux' and is_root() and bool(shutil.which('ip'))
@@ -122,7 +126,7 @@ def caps(images_dir):
         'kvm': os.path.exists('/dev/kvm') and os.access('/dev/kvm', os.R_OK | os.W_OK),
         'ip': bool(shutil.which('ip')),
         'asyncssh': _has_asyncssh(),
-        'interfaces': host_ifaces(),
+        'interfaces': interfaces if interfaces is not None else host_ifaces(),
         'images': list_images(images_dir),
     }
 
@@ -236,8 +240,8 @@ class RealManager:
         self.next_port = 32769
 
     # ---------------------------------------------------------------- info
-    def caps(self):
-        return caps(self.images_dir)
+    def caps(self, interfaces=None):
+        return caps(self.images_dir, interfaces)
 
     def is_running(self, lab, nid):
         r = self.nodes.get((lab, nid))

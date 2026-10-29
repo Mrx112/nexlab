@@ -1,13 +1,20 @@
 """HTTP + WebSocket server (aiohttp)."""
 import asyncio
 import copy
+import hashlib
 import json
 import os
 import re
+import shutil
+import signal
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
+import uuid
+import zipfile
 from urllib.parse import urlparse
 
 from aiohttp import web, WSMsgType
@@ -24,8 +31,9 @@ from . import ai
 
 BASE = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(BASE, 'static')
+APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -198,6 +206,8 @@ def lan_addresses():
 
 async def system(req):
     app = req.app
+    network = sysinfo.windows_network_info() if sysinfo.OS == 'windows' else {'interfaces': None, 'neighbors': [], 'error': ''}
+    caps = app['real'].caps(network['interfaces'])
     total, avail = sysinfo.memory_mb()
     load = sysinfo.load_avg()
     rt_nodes = sum(1 for rt in app['mgr'].labs.values() for n in rt.lab['nodes'] if rt.is_running(n['id']))
@@ -208,7 +218,8 @@ async def system(req):
         'cpus': os.cpu_count(), 'load': load,
         'mem_total': total, 'mem_avail': avail,
         'app_rss_mb': rss, 'running_nodes': rt_nodes, 'port': app['port'],
-        'addresses': lan_addresses(), 'caps': app['real'].caps(),
+        'addresses': lan_addresses(), 'caps': caps,
+        'neighbors': network['neighbors'], 'network_error': network['error'],
     })
 
 
@@ -252,8 +263,14 @@ def _fetch_latest_release():
     asset_name = _UPDATE_ASSETS.get(sys.platform)
     if asset_name is None:
         raise ValueError(f'Updates are not available for {sys.platform}.')
-    if not any(isinstance(asset, dict) and asset.get('name') == asset_name for asset in assets):
-        raise ValueError(f'Latest release is missing the {asset_name} installer.')
+    required_assets = [asset_name]
+    if sys.platform == 'win32':
+        required_assets.extend(('NexLab-Windows-x64.zip', 'NexLab-SHA256SUMS.txt'))
+    asset_names = {asset['name'] for asset in assets
+                   if isinstance(asset, dict) and isinstance(asset.get('name'), str)}
+    missing = [name for name in required_assets if name not in asset_names]
+    if missing:
+        raise ValueError('Latest release is missing: ' + ', '.join(missing))
     return {
         'version': tag.lstrip('v'),
         'release_url': url,
@@ -283,6 +300,164 @@ async def update_check(req):
         'release_url': latest['release_url'],
         'download_url': latest['download_url'] if latest_version > current_version else '',
     })
+
+
+def _download_update_file(url, destination, maximum_size):
+    parsed = urlparse(url)
+    if parsed.scheme != 'https' or parsed.hostname not in {
+        'github.com', 'api.github.com', 'codeload.github.com',
+        'release-assets.githubusercontent.com', 'objects.githubusercontent.com',
+    }:
+        raise ValueError('URL unduhan update bukan host GitHub tepercaya.')
+    request = urllib.request.Request(url, headers={'User-Agent': 'NexLab-updater'})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        final_url = urlparse(response.geturl())
+        if final_url.scheme != 'https' or final_url.hostname not in {
+            'github.com', 'api.github.com', 'codeload.github.com',
+            'release-assets.githubusercontent.com', 'objects.githubusercontent.com',
+        }:
+            raise ValueError('Pengalihan unduhan update tidak tepercaya.')
+        length = response.headers.get('Content-Length')
+        if length and int(length) > maximum_size:
+            raise ValueError('Ukuran file update melewati batas yang diizinkan.')
+        total = 0
+        with open(destination, 'wb') as output:
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > maximum_size:
+                    raise ValueError('Ukuran file update melewati batas yang diizinkan.')
+                output.write(chunk)
+    if not total:
+        raise ValueError('File update dari GitHub kosong.')
+
+
+def _stage_windows_update(latest):
+    version = latest['version']
+    update_dir = os.path.join(APP_DIR, 'Update')
+    os.makedirs(update_dir, exist_ok=True)
+    suffix = uuid.uuid4().hex[:8]
+    archive_path = os.path.join(update_dir, f'NexLab-{version}-{suffix}.zip')
+    checksum_path = os.path.join(update_dir, f'SHA256SUMS-{version}-{suffix}.txt')
+    helper_source = os.path.join(BASE, 'installers', 'windows', 'update.ps1')
+    if not os.path.isfile(helper_source):
+        raise OSError('Skrip updater Windows tidak ditemukan pada instalasi ini.')
+
+    frozen = bool(getattr(sys, 'frozen', False))
+    install_script_path = ''
+    helper_path = ''
+    try:
+        if frozen:
+            release_base = f'https://github.com/Mrx112/nexlab/releases/download/v{version}'
+            archive_url = f'{release_base}/NexLab-Windows-x64.zip'
+            checksum_url = f'{release_base}/NexLab-SHA256SUMS.txt'
+            _download_update_file(archive_url, archive_path, 512 * 1024 * 1024)
+            _download_update_file(checksum_url, checksum_path, 1024 * 1024)
+            with open(checksum_path, encoding='utf-8') as checksums:
+                match = next((re.match(r'^\s*([0-9a-fA-F]{64})\s+\*?NexLab-Windows-x64\.zip\s*$', line)
+                              for line in checksums if 'NexLab-Windows-x64.zip' in line), None)
+            if not match:
+                raise ValueError('Checksum resmi untuk arsip Windows tidak ditemukan.')
+            digest = hashlib.sha256()
+            with open(archive_path, 'rb') as archive:
+                for chunk in iter(lambda: archive.read(1024 * 1024), b''):
+                    digest.update(chunk)
+            archive_hash = digest.hexdigest()
+            if archive_hash.lower() != match.group(1).lower():
+                raise ValueError('Verifikasi SHA-256 arsip update Windows gagal.')
+
+            install_source = os.path.join(BASE, 'installers', 'windows', 'install.ps1')
+            if not os.path.isfile(install_source):
+                raise OSError('Skrip installer Windows tidak ditemukan pada instalasi ini.')
+            install_script_path = os.path.join(tempfile.gettempdir(), f'NexLab-Install-{suffix}.ps1')
+            shutil.copyfile(install_source, install_script_path)
+            mode = 'installed'
+        else:
+            source_url = f'https://api.github.com/repos/Mrx112/nexlab/zipball/v{version}'
+            _download_update_file(source_url, archive_path, 300 * 1024 * 1024)
+            with zipfile.ZipFile(archive_path) as archive:
+                names = archive.namelist()
+                if (not any(name.endswith('/run.py') for name in names)
+                        or not any(name.endswith('/server/app.py') for name in names)
+                        or any(name.startswith(('/', '\\')) or ':' in name
+                               or '..' in name.replace('\\', '/').split('/') for name in names)
+                        or sum(info.file_size for info in archive.infolist()) > 1024 * 1024 * 1024):
+                    raise ValueError('Arsip source dari GitHub tidak memiliki struktur NexLab yang valid.')
+            archive_hash = hashlib.sha256()
+            with open(archive_path, 'rb') as archive:
+                for chunk in iter(lambda: archive.read(1024 * 1024), b''):
+                    archive_hash.update(chunk)
+            archive_hash = archive_hash.hexdigest()
+            mode = 'source'
+
+        helper_path = os.path.join(tempfile.gettempdir(), f'NexLab-Update-{suffix}.ps1')
+        shutil.copyfile(helper_source, helper_path)
+        args = [
+            shutil.which('powershell.exe') or 'powershell.exe',
+            '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+            '-File', helper_path, '-Mode', mode,
+            '-AppDirectory', APP_DIR, '-UpdateDirectory', update_dir,
+            '-ArchivePath', archive_path, '-ArchiveHash', archive_hash,
+            '-ProcessId', str(os.getpid()),
+        ]
+        if install_script_path:
+            args.extend(['-InstallScript', install_script_path, '-ChecksumPath', checksum_path])
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        helper = subprocess.Popen(args, cwd=tempfile.gettempdir(), creationflags=flags, close_fds=True)
+        time.sleep(0.2)
+        if helper.poll() is not None:
+            raise OSError('Updater Windows berhenti sebelum dapat menunggu aplikasi.')
+        return version
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError,
+            UnicodeError, zipfile.BadZipFile, subprocess.SubprocessError):
+        for path in (archive_path, checksum_path, install_script_path, helper_path):
+            if path and os.path.isfile(path):
+                os.remove(path)
+        raise
+
+
+async def update_install(req):
+    if req['user']['role'] != 'admin':
+        return jerr('Hanya admin yang dapat memasang update aplikasi.', 403)
+    if sysinfo.OS != 'windows':
+        return jerr('Pemasangan update dari aplikasi saat ini hanya didukung di Windows.', 400)
+    if req.app.get('update_installing'):
+        return jerr('Pemasangan update sudah berjalan.', 409)
+    req.app['update_installing'] = True
+    try:
+        latest = await asyncio.to_thread(_fetch_latest_release)
+        latest_version = _version_tuple(latest['version'])
+        current_version = _version_tuple(VERSION)
+        if latest_version is None or current_version is None:
+            raise ValueError('Versi aplikasi tidak valid; update dibatalkan.')
+        if latest_version <= current_version:
+            req.app['update_installing'] = False
+            return jerr('Tidak ada versi rilis yang lebih baru untuk dipasang.', 409)
+        version = await asyncio.to_thread(_stage_windows_update, latest)
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError, UnicodeError,
+            zipfile.BadZipFile, subprocess.SubprocessError) as error:
+        req.app['update_installing'] = False
+        return jerr(f'Update gagal disiapkan: {error}', 502)
+
+    loop = asyncio.get_running_loop()
+    loop.call_later(1.5, os.kill, os.getpid(), signal.SIGINT)
+    return web.json_response({
+        'ok': True, 'version': version,
+        'message': 'Update terverifikasi dan siap dipasang. NexLab akan ditutup, diperbarui, lalu dibuka kembali.',
+    })
+
+
+async def network_ping(req):
+    data = await req.json()
+    result = sysinfo.ping_host(data.get('target', ''))
+    network = (sysinfo.windows_network_info()
+               if sysinfo.OS == 'windows' and result['error'] != 'Masukkan alamat IPv4 yang valid.'
+               else {'neighbors': [], 'error': ''})
+    result['neighbors'] = network['neighbors']
+    result['network_error'] = network['error']
+    return web.json_response(result)
 
 
 async def templates(req):
@@ -949,6 +1124,8 @@ def build_app(data_dir, port=8080):
     r.add_post('/api/me/password', change_password)
     r.add_get('/api/system', system)
     r.add_get('/api/update/check', update_check)
+    r.add_post('/api/update/install', update_install)
+    r.add_post('/api/network/ping', network_ping)
     r.add_get('/api/templates', templates)
     r.add_get('/api/labs', labs_list)
     r.add_post('/api/labs', lab_create)
