@@ -22,6 +22,7 @@
 
   let animDone = false;
   let serverReady = false;
+  let authChecked = false;
 
   function speak() {
     if (!('speechSynthesis' in window)) return;
@@ -49,82 +50,143 @@
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.12;
+      masterGain.gain.value = 0.15;
       masterGain.connect(audioCtx.destination);
 
+      // Bass drone (low sawtooth)
       const bass = audioCtx.createOscillator();
       const bassGain = audioCtx.createGain();
       bass.type = 'sawtooth';
-      bass.frequency.value = 60;
-      bassGain.gain.value = 0.4;
+      bass.frequency.value = 55;
+      bassGain.gain.value = 0.35;
       bass.connect(bassGain);
       const bassFilter = audioCtx.createBiquadFilter();
       bassFilter.type = 'lowpass';
-      bassFilter.frequency.value = 180;
+      bassFilter.frequency.value = 200;
       bassGain.connect(bassFilter);
       bassFilter.connect(masterGain);
 
+      // Cyber pad (sine with LFO-filtered sweep)
       const pad = audioCtx.createOscillator();
       const padGain = audioCtx.createGain();
       pad.type = 'sine';
-      pad.frequency.value = 196.00;
-      padGain.gain.value = 0.3;
+      pad.frequency.value = 329.64;
+      padGain.gain.value = 0.25;
       pad.connect(padGain);
       const padFilter = audioCtx.createBiquadFilter();
       padFilter.type = 'lowpass';
-      padFilter.frequency.value = 600;
+      padFilter.frequency.value = 800;
       padGain.connect(padFilter);
       padFilter.connect(masterGain);
 
       const lfo = audioCtx.createOscillator();
       const lfoGain = audioCtx.createGain();
       lfo.type = 'sine';
-      lfo.frequency.value = 0.07;
-      lfoGain.gain.value = 250;
+      lfo.frequency.value = 0.08;
+      lfoGain.gain.value = 300;
       lfo.connect(lfoGain);
       lfoGain.connect(padFilter.frequency);
 
-      const noise = audioCtx.createBufferSource();
-      const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 3, audioCtx.sampleRate);
-      const noiseData = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < noiseBuffer.length; i++) {
-        noiseData[i] = Math.random() * 2 - 1;
+      // Network arpeggio (high sine sequence)
+      const arpFreqs = [440, 523.25, 659.25, 783.99, 659.25, 523.25];
+      const arpGain = audioCtx.createGain();
+      arpGain.gain.value = 0.15;
+      arpGain.connect(masterGain);
+
+      let arpIndex = 0;
+      const arpeggio = () => {
+        if (arpIndex >= arpFreqs.length) {
+          arpIndex = 0;
+          setTimeout(arpeggio, 2000 + Math.random() * 1000);
+          return;
+        }
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = arpFreqs[arpIndex];
+        g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        o.connect(g);
+        g.connect(masterGain);
+        o.start();
+        o.stop(audioCtx.currentTime + 0.3);
+        arpIndex++;
+        setTimeout(arpeggio, 120 + Math.random() * 80);
+      };
+
+      // Network "ping" pulses (short square wave bursts)
+      let pingCount = 0;
+      const ping = () => {
+        if (pingCount >= 16) return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.value = 880 + pingCount * 40;
+        g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        o.connect(g);
+        g.connect(masterGain);
+        o.start();
+        o.stop(audioCtx.currentTime + 0.15);
+        pingCount++;
+        setTimeout(ping, 350 + Math.random() * 200);
+      };
+
+      // White noise sweep (cyber data burst)
+      const burst = audioCtx.createBufferSource();
+      const burstBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.4, audioCtx.sampleRate);
+      const burstData = burstBuffer.getChannelData(0);
+      for (let i = 0; i < burstBuffer.length; i++) {
+        burstData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / burstBuffer.length, 3);
       }
-      noise.buffer = noiseBuffer;
-      const noiseGain = audioCtx.createGain();
-      noiseGain.gain.setTargetAtTime(0.15, audioCtx.currentTime);
-      noise.connect(noiseGain);
-      const noiseFilter = audioCtx.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.value = 1200;
-      noiseFilter.Q = 1;
-      noiseGain.connect(noiseFilter);
-      noiseFilter.connect(masterGain);
-      const noiseLFO = audioCtx.createOscillator();
-      const noiseLFOGain = audioCtx.createGain();
-      noiseLFO.type = 'sine';
-      noiseLFO.frequency.value = 0.15;
-      noiseLFOGain.gain.value = 300;
-      noiseLFO.connect(noiseLFOGain);
-      noiseLFOGain.connect(noiseFilter.frequency);
+      burst.buffer = burstBuffer;
+      const burstGain = audioCtx.createGain();
+      burstGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      burstGain.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 0.02);
+      burstGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      const burstFilter = audioCtx.createBiquadFilter();
+      burstFilter.type = 'bandpass';
+      burstFilter.frequency.setValueAtTime(200, audioCtx.currentTime);
+      burstFilter.frequency.exponentialRampToValueAtTime(8000, audioCtx.currentTime + 0.4);
+      burst.connect(burstGain);
+      burstGain.connect(burstFilter);
+      burstFilter.connect(masterGain);
+
+      // Rising sweep at the end
+      setTimeout(() => {
+        const sweep = audioCtx.createOscillator();
+        const sweepGain = audioCtx.createGain();
+        sweep.type = 'sawtooth';
+        sweep.frequency.setValueAtTime(200, audioCtx.currentTime);
+        sweep.frequency.exponentialRampToValueAtTime(2000, audioCtx.currentTime + 2);
+        sweepGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        sweepGain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.5);
+        sweepGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+        sweep.connect(sweepGain);
+        sweepGain.connect(masterGain);
+        sweep.start();
+        sweep.stop(audioCtx.currentTime + 2);
+      }, 2000);
 
       bass.start();
       pad.start();
       lfo.start();
-      noiseLFO.start();
-      noise.start();
-      noise.stop(audioCtx.currentTime + 3);
+      burst.start();
+      setTimeout(arpeggio, 500);
+      setTimeout(ping, 300);
 
-      masterGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-      masterGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+      // Fade out everything after 8 seconds
+      masterGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      masterGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 8);
 
       setTimeout(() => {
-        bass.stop(audioCtx.currentTime + 1);
-        pad.stop(audioCtx.currentTime + 1);
-        lfo.stop(audioCtx.currentTime + 1);
-        noiseLFO.stop(audioCtx.currentTime + 1);
-        noiseFilter.disconnect();
-      }, 3000);
+        bass.stop();
+        pad.stop();
+        lfo.stop();
+        burstFilter.disconnect();
+      }, 8000);
     } catch(e) {}
   }
 
@@ -134,7 +196,7 @@
       .then(r => {
         if (r.ok) {
           serverReady = true;
-          proceed();
+          checkAuth();
         } else {
           setTimeout(checkServer, 300);
         }
@@ -142,14 +204,36 @@
       .catch(() => setTimeout(checkServer, 300));
   }
 
-  function proceed() {
+  function checkAuth() {
+    if (authChecked) return;
+    authChecked = true;
+    fetch('/api/me', {credentials: 'same-origin'})
+      .then(r => {
+        if (r.ok) {
+          proceed(true);
+        } else {
+          proceed(false);
+        }
+      })
+      .catch(() => proceed(false));
+  }
+
+  function proceed(loggedIn) {
     if (!animDone) return;
-    window.location.href = '/';
+    window.location.href = loggedIn ? '/#/labs' : '/';
   }
 
   function onVideoEnd() {
     animDone = true;
-    if (serverReady) proceed();
+    if (serverReady) {
+      proceed(true);
+    } else if (!authChecked) {
+      fetch('/api/me', {credentials: 'same-origin'})
+        .then(r => proceed(r.ok))
+        .catch(() => proceed(false));
+    } else {
+      proceed(true);
+    }
   }
 
   function init() {
@@ -159,7 +243,7 @@
     video.addEventListener('ended', onVideoEnd);
     video.addEventListener('error', () => {
       animDone = true;
-      if (serverReady) proceed();
+      if (authChecked) proceed(true);
     });
 
     setTimeout(checkServer, 500);
