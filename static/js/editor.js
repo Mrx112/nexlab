@@ -875,7 +875,8 @@ class Editor {
     if (k === 'sim') {
       const targets = this.lab.nodes.filter(x => x.id !== n.id && this.tpl[x.type].kind === 'sim');
       html += `<h5>Uji ping cepat</h5><div class="row"><select class="input" id="pDst">${targets.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}<option value="ip">IP manual…</option></select>
-        <button class="btn sm" id="pGo">${UI.ping} Ping</button></div><div id="pRes" class="muted" style="font-size:12.5px;margin-top:6px"></div>`;
+        <button class="btn sm" id="pGo">${UI.ping} Ping</button></div><div id="pRes" class="muted" style="font-size:12.5px;margin-top:6px"></div>
+        <div class="tip">Ping ini mengikuti routing lab simulasi, bukan NIC Windows. Untuk menguji jaringan nyata, gunakan Status Sistem atau node Perangkat Fisik.</div>`;
     }
     html += `<h5>Tampilan</h5><div class="row"><div class="field grow"><label>Ukuran ikon</label><select class="input sm" id="nSize">${[[0.75, 'Kecil'], [1, 'Normal'], [1.25, 'Besar'], [1.6, 'Sangat besar']].map(([v, l]) => `<option value="${v}" ${(n.size || 1) == v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="field grow"><label>Posisi label</label><select class="input sm" id="nLpos">${[['bottom', 'Bawah'], ['top', 'Atas'], ['left', 'Kiri'], ['right', 'Kanan']].map(([v, l]) => `<option value="${v}" ${(n.lpos || 'bottom') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>`;
@@ -952,6 +953,29 @@ class Editor {
       $('#pRes').innerHTML = r.ok ? `<span class="yes">Berhasil</span> ke ${esc(r.dst)} (${r.path.length - 1} hop)` : `<span class="no">Gagal</span> ke ${esc(r.dst || '')}: ${esc(why || '')}${r.at ? ' di ' + esc(this.nodeById(r.at)?.name || '') : ''}`;
       if (r.path) this.animatePath(r.path, r.ok);
     };
+    if ($('#remote-ping')) $('#remote-ping').onclick = async event => {
+      const button = event.currentTarget;
+      const target = String(el.querySelector('[data-prop="host"]').value || '').trim();
+      const result = $('#remote-ping-result');
+      if (!target) {
+        result.textContent = 'Isi IP manajemen perangkat terlebih dahulu.';
+        return;
+      }
+      button.disabled = true;
+      result.textContent = `Ping ${target} dari server NexLab…`;
+      try {
+        const reply = await App.api('POST', '/api/network/ping', { target });
+        if (!reply) {
+          result.textContent = 'Uji ping gagal dijalankan.';
+        } else if (reply.ok) {
+          result.innerHTML = `<span class="yes">Terjangkau</span> — ${reply.time_ms} ms`;
+        } else {
+          result.innerHTML = `<span class="no">Tidak terjangkau</span>: ${esc(reply.error || 'Tidak ada balasan ICMP.')}`;
+        }
+      } finally {
+        button.disabled = false;
+      }
+    };
     el.querySelectorAll('[data-prop]').forEach(inp => inp.onchange = () => {
       const key = inp.dataset.prop;
       n.props[key] = inp.type === 'checkbox' ? inp.checked : (inp.type === 'number' ? +inp.value : inp.value);
@@ -990,9 +1014,9 @@ class Editor {
     if (n.type === 'ont') return `<h5>ONT</h5>${inp('sn', 'Serial number (dokumentasi)', 'text', 'ZTEG12345678')}<div class="tip">Mode bridge: port PON ke ODP, LAN1–4 ke router/PC. Di OLT, VLAN layanan diatur per port GPON.</div>`;
     if (n.type === 'hub') return '';
     if (n.type === 'cloud' && caps.netmode !== 'tap') return `<h5>Cloud (server ${esc({ windows: 'Windows', macos: 'macOS', linux: 'Linux non-root' }[caps.os] || '')})</h5>
-        <div class="tip">Di mode simulasi Cloud berfungsi sebagai hub. VM QEMU yang dikabel ke Cloud mendapat akses <b>NAT</b> ke jaringan & internet komputer server (DHCP 10.0.2.15, gateway 10.0.2.2) — cukup untuk update, ping ke router/perangkat di LAN, dan mengakses perangkat fisik lewat IP.</div>
+        <div class="tip">Di mode simulasi Cloud berfungsi sebagai hub. VM QEMU yang dikabel ke Cloud mendapat akses <b>NAT</b> ke jaringan komputer server (DHCP 10.0.2.15, gateway 10.0.2.2). NAT bukan bridge Layer-2: PC/router simulasi tidak meneruskan paket lewat NIC Windows, dan broadcast perangkat fisik tidak masuk ke lab.</div>
         ${inp('hostfwd', 'Teruskan port server → SSH VM (opsional)', 'number', '2222')}
-        <div class="tip">Bridge layer-2 langsung ke NIC fisik (VM satu segmen dengan switch fisik) hanya tersedia bila server berjalan di Linux dengan sudo. Untuk console perangkat fisik gunakan node <b>Perangkat Fisik</b> (Telnet/SSH) — berjalan di semua OS.</div>`;
+        <div class="tip">Bridge Layer-2 langsung ke NIC fisik hanya tersedia bila server berjalan di Linux dengan sudo. Untuk mengelola perangkat fisik dari Windows, gunakan node <b>Perangkat Fisik</b>: uji ping dari server, lalu buka console SSH/Telnet. Kabel antara node simulasi dan perangkat fisik hanya dokumentasi.</div>`;
     if (n.type === 'cloud') {
       const ifs = caps.interfaces || [];
       return `<h5>Jembatan ke jaringan fisik (mode real)</h5>
@@ -1005,7 +1029,8 @@ class Editor {
         <datalist id="remote-ip-${n.id}">${hosts.map(h => `<option value="${esc(h.ip)}">${esc([h.interface, h.mac].filter(Boolean).join(' · '))}</option>`).join('')}</datalist></div>
         <div class="row"><div class="field grow"><label>Protokol</label><select class="input" data-prop="protocol">${['telnet', 'ssh'].map(m => `<option ${m === p.protocol ? 'selected' : ''}>${m}</option>`).join('')}</select></div>${inp('port', 'Port', 'number')}</div>
         ${inp('username', 'Username (SSH)')}${inp('ports', 'Nama port (pisahkan koma)', 'text', 'Gi0/0,Gi0/1')}
-        <div class="tip">Pilih alamat dari cache neighbor Windows atau masukkan IP sendiri. Console dibuka dari server ke perangkat ini; akses SSH/Telnet tetap bergantung pada konfigurasi dan firewall perangkat.${caps.asyncssh ? '' : ' Untuk SSH pasang dulu: <span class="mono">pip install asyncssh</span>.'}</div>`;
+        <div class="row"><button class="btn sm" id="remote-ping">${UI.ping} Uji ping dari server</button><span id="remote-ping-result" class="muted" role="status" aria-live="polite"></span></div>
+        <div class="tip">Uji ping ini berasal dari komputer yang menjalankan NexLab, bukan dari PC simulasi. Jika perangkat terjangkau, buka <b>Console</b> untuk konfigurasi langsung melalui SSH/Telnet. Tidak ada balasan ICMP belum tentu berarti SSH/Telnet tidak bisa; firewall perangkat mungkin memblokir ping. IP target harus alamat manajemen perangkat; kabel ke node simulasi tidak membuat bridge jaringan. ${caps.asyncssh ? '' : 'Untuk SSH pasang dulu: <span class="mono">pip install asyncssh</span>.'}</div>`;
     }
     return '';
   }

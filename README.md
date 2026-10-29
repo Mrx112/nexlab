@@ -145,11 +145,12 @@ Opsi `run.py`: `--host`, `--port`, `--data`, `--cert`, dan `--key`. Saat dibekuk
 
 ## Menghubungkan ke perangkat fisik
 
-1. Jalankan server sebagai root.
-2. Cara paling aman: pakai NIC kedua (USB LAN pun bisa) yang dicolok ke switch/router fisik. Atau jadikan NIC utama sebagai bridge: `sudo scripts/make-bridge.sh eth0` (membuat `pnet0`, IP dipindah ke bridge; jalankan dari console lokal).
-3. Di editor, taruh node **Cloud**, pilih target `eth1` atau `pnet0`.
-4. Kabelkan node **QEMU VM** atau **Linux Host** ke Cloud. Node tersebut kini berada di segmen L2 yang sama dengan perangkat sungguhan (bisa ping, DHCP, OSPF, CDP/LLDP dengan perangkat fisik).
-5. Untuk mengakses CLI perangkat fisik langsung dari browser, tambahkan node **Perangkat Fisik** dan isi IP/port Telnet atau SSH-nya.
+Ada dua alur yang berbeda:
+
+- **Kelola perangkat dari Windows:** komputer NexLab harus dapat menjangkau IP manajemen switch/router. Di editor, tambahkan node **Perangkat Fisik**, isi IP manajemen, pilih SSH/Telnet, tekan **Uji ping dari server**, lalu buka **Console** dan masukkan kredensial perangkat. Console menjalankan sesi CLI langsung ke perangkat melalui komputer NexLab; pastikan SSH/Telnet aktif dan akun memiliki hak konfigurasi. Perangkat dapat memblokir ICMP, jadi kegagalan ping saja tidak selalu berarti SSH/Telnet tidak dapat diakses. Jangan gunakan IP komputer NexLab sebagai alamat perangkat kecuali memang perangkat yang hendak dikelola.
+- **Sambungkan VM ke jaringan fisik pada Layer 2:** jalankan server NexLab pada Linux dengan root. Paling aman pakai NIC kedua (USB LAN pun bisa) yang dicolok ke switch/router fisik. Atau jadikan NIC utama sebagai bridge: `sudo scripts/make-bridge.sh eth0` (membuat `pnet0`, IP dipindah ke bridge; jalankan dari console lokal). Di editor, tambahkan node **Cloud**, pilih target NIC kedua atau `pnet0`, lalu kabelkan node **QEMU VM** atau **Linux Host** ke Cloud.
+
+PC/router/switch simulasi memakai mesin routing virtual. Karena itu ping dari PC1 ke IP Windows atau gateway fisik tidak dikirim lewat Wi-Fi komputer. Cloud Windows/macOS memakai NAT QEMU—berguna untuk koneksi keluar VM, tetapi bukan bridge Layer 2 dan tidak meneruskan broadcast CDP/LLDP. Kabel antara node simulasi dan perangkat fisik adalah dokumentasi saja. Untuk menguji koneksi nyata dari Windows, gunakan **Status sistem → Uji ping jaringan** atau tombol **Uji ping dari server** pada node Perangkat Fisik; hasilnya berasal dari host NexLab, bukan dari PC simulasi.
 
 ## Image QEMU
 

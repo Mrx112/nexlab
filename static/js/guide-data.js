@@ -404,13 +404,15 @@ const GUIDE_KB = [
 
 { id: 'physical', cat: 'Perangkat real', lvl: 'Lanjut', title: 'Menyambungkan lab ke perangkat fisik',
   kw: 'perangkat fisik asli hardware nyata sungguhan bridge nic cloud pnet0 switch fisik router fisik koneksi luar',
-  intro: 'Node Cloud menjembatani lab ke NIC server sehingga node QEMU/Linux Host berada di jaringan yang sama dengan perangkat sungguhan.',
+  intro: 'Pilih alur sesuai kebutuhan: Windows dapat mengelola perangkat sungguhan melalui IP manajemen dan SSH/Telnet; bridge Layer-2 ke NIC fisik didukung pada server Linux dengan root. NAT Windows bukan bridge.',
   steps: [
-    ['Siapkan NIC', 'Paling aman pakai NIC kedua (USB LAN pun bisa). Atau ubah NIC utama jadi bridge pnet0 (jalankan dari console lokal):', 'Server Linux', 'sudo scripts/make-bridge.sh eth0'],
-    ['Cloud', 'Taruh node Cloud, pilih target NIC/bridge di panel kanan.', '', ''],
-    ['Kabelkan', 'Hubungkan node QEMU VM atau Linux Host ke Cloud, nyalakan. Uji ping ke perangkat fisik.', 'Linux Host', 'ip a\nping -c 3 192.168.1.1'],
-    ['Console perangkat fisik', 'Tambahkan node Perangkat Fisik, isi IP & protokol (Telnet/SSH).', '', ''],
-  ] },
+    ['Bridge Layer-2 di Linux', 'Paling aman pakai NIC kedua (USB LAN pun bisa). Atau ubah NIC utama jadi bridge pnet0 dari console lokal:', 'Server Linux', 'sudo scripts/make-bridge.sh eth0'],
+    ['Pilih Cloud', 'Taruh node Cloud, pilih NIC kedua atau bridge target di panel kanan.', '', ''],
+    ['Sambungkan VM real', 'Hubungkan node QEMU VM atau Linux Host ke Cloud, nyalakan, atur IP/gateway pada VM, lalu uji IP manajemen perangkat fisik.', 'Linux Host', 'ip a\nping -c 3 192.168.1.1'],
+    ['Kelola perangkat dari Windows', 'Tambahkan node Perangkat Fisik dan isi IP manajemen, pilih SSH/Telnet, gunakan tombol Uji ping dari server, lalu buka Console. Ping dari PC simulasi tetap terisolasi.', '', ''],
+    ['Konfigurasi perangkat', 'Console Perangkat Fisik meneruskan sesi CLI ke perangkat sungguhan. Pastikan SSH/Telnet aktif dan akun memiliki hak konfigurasi; simpan config dengan perintah sesuai vendor.', 'Perangkat fisik', ''],
+  ],
+  tips: ['Kabel dari PC/router/switch simulasi ke perangkat fisik hanya dokumentasi, bukan koneksi data.', 'Gunakan IP manajemen perangkat—bukan IP komputer NexLab atau gateway kecuali gateway itu sendiri perangkat yang ingin dikelola.', 'Windows NAT tidak meneruskan broadcast Layer-2 seperti CDP/LLDP; untuk satu segmen jaringan langsung, gunakan server Linux dengan bridge.'] },
 
 // ======================================================================= MIKROTIK
 { id: 'mt-basic', cat: 'MikroTik', lvl: 'Pemula', title: 'MikroTik: IP, gateway & DNS',
