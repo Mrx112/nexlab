@@ -13,6 +13,15 @@ Dibuat supaya **ringan**: node simulasi (router, switch, firewall, PC) praktis t
 - Server listen di `0.0.0.0` sehingga bisa dibuka dari semua IP jaringan yang terhubung; HTTPS opsional.
 - **Jaringan Windows**: halaman Status Sistem menampilkan NIC, alamat IPv4/gateway, dan neighbor yang sudah tercatat di cache ARP. Ping satu IP Windows/LAN atau alamat publik seperti `8.8.8.8`; IP neighbor dapat dipilih untuk konfigurasi node Perangkat Fisik. NexLab tidak melakukan pemindaian subnet.
 - **Pembaruan Windows**: admin dapat memasang rilis GitHub langsung dari Status Sistem. Arsip aplikasi diverifikasi dengan SHA-256; folder `Update` dipakai untuk staging dan file unduhan dibersihkan setelah pemasangan berhasil. Database, lab, image, serta virtualenv instalasi source tetap dipertahankan.
+- **Batas kewenangan**: akun pengguna NexLab hanya mengatur data melalui UI; perubahan source dan penerbitan rilis dikendalikan di GitHub oleh pemilik repository. Password aplikasi bukan kunci untuk mengubah source.
+
+### Persetujuan perubahan kode (pemilik repository)
+
+Semua perubahan source melalui pull request. `.github/CODEOWNERS` menetapkan `@Mrx112` sebagai pemilik seluruh file, dan workflow **Owner approval** memeriksa bahwa persetujuan pemilik berlaku untuk commit terbaru sebelum pull request dapat lolos pemeriksaan. Jika ada commit baru setelah persetujuan, pemilik harus meninjau ulang. Perubahan yang dibuat langsung oleh pemilik ditandai sebagai perubahan pemilik; persetujuan rilis tetap dibutuhkan.
+
+Workflow rilis menolak penerbit selain `Mrx112` dan menggunakan environment `nexlab-release`. Di **Settings → Environments → nexlab-release**, atur `Mrx112` sebagai required reviewer. Karena rilis dimulai oleh pemilik yang sama, jangan aktifkan pencegahan self-review kecuali ada publisher tepercaya lain yang memulai deployment; tanpa itu pemilik tidak dapat menyetujui rilisnya sendiri. Di **Settings → Rules → Rulesets**, buat ruleset branch `master` untuk mewajibkan pull request, review Code Owner, dan pemeriksaan `Owner approval / latest commit`; blokir force push/penghapusan, dan batasi akses tulis/bypass ke pemilik saja. Buat juga ruleset tag `v*` yang membatasi pembuatan/pembaruan/penghapusan tag hanya untuk pemilik. Atur Actions default GITHUB_TOKEN ke read-only.
+
+Pengguna akhir memakai rilis aplikasi dan tidak memerlukan akses repository atau file source. Kontrol GitHub melindungi source/rilis resmi, bukan salinan yang sudah diunduh: pemilik komputer masih dapat memodifikasi binary lokal. Jangan memasukkan password ke source, commit, log, atau chat; bila password sempat dibagikan, segera ganti.
 
 **Editor topologi**
 - Drag & drop perangkat, kabel antar port (pilih interface seperti PNETLab/Packet Tracer), lampu status link (hijau/kuning/merah), label interface, catatan, zoom/pan, menu klik-kanan, autosave.
@@ -186,7 +195,7 @@ data/               database SQLite, image, runtime (dibuat otomatis)
 
 Website promosi dan marketplace komunitas tersedia di folder `WebSite/`. Buka `WebSite/index.html` untuk melihatnya, atau sajikan folder tersebut dengan web server statis. Urutan 240 gambar di `WebSite/bg/` ditampilkan sebagai latar sinematik yang mengikuti scroll; versi WebP terkompresi disimpan di `WebSite/bg/optimized/` agar lebih ringan. File PNG asli diabaikan Git melalui `.gitignore`.
 
-Katalog bawaan ditandai sebagai contoh. Kreator dapat menyimpan listing beserta file lab NexLab di penyimpanan browser, mengunduh file tersebut, atau mengekspor dan membagikan paket listing untuk diimpor di browser lain. Ini adalah alur berbagi statis, bukan marketplace server: pembayaran perlu dihubungkan pada `WebSite/config.js` sebelum menjual file berbayar. Tombol unduhan per OS sudah diarahkan ke installer pada GitHub Release terbaru; setelah rilis pertama tersedia, installer mengambil paket aplikasi, memeriksa SHA-256, memasang NexLab, dan membuat shortcut. Isi `donateUrl` dan `checkoutUrl` di file konfigurasi yang sama untuk mengaktifkan tautan donasi dan checkout.
+Katalog bawaan ditandai sebagai contoh. Kreator dapat menyimpan listing beserta file lab NexLab di penyimpanan browser, mengunduh file tersebut, atau mengekspor dan membagikan paket listing untuk diimpor di browser lain. Ini adalah alur berbagi statis, bukan marketplace server: pembayaran perlu dihubungkan pada `WebSite/config.js` sebelum menjual file berbayar. Tombol unduhan per OS sudah diarahkan ke installer pada GitHub Release terbaru; setelah rilis pertama tersedia, installer mengambil paket aplikasi, memeriksa SHA-256, memasang NexLab, dan membuat shortcut. Konfigurasi `saweriaUrl` dan `paypalUrl` mengatur tautan donasi, sedangkan `checkoutUrl` digunakan untuk checkout marketplace.
 
 Website dibuat oleh Adi Susilo / Creator.
 

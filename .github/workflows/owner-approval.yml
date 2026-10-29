@@ -1,0 +1,54 @@
+name: Owner approval
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  approval:
+    name: Owner approval / latest commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require owner approval for the current code
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pull = context.payload.pull_request;
+            if (!pull) {
+              core.setFailed('Pull request details are unavailable.');
+              return;
+            }
+
+            const owner = context.repo.owner.toLowerCase();
+            if (pull.user.login.toLowerCase() === owner) {
+              core.info('The repository owner authored this change.');
+              return;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pull.number,
+              per_page: 100,
+            });
+            const ownerReviews = reviews.filter(
+              review => review.user?.login.toLowerCase() === owner,
+            );
+            const latestReview = ownerReviews.at(-1);
+            if (
+              !latestReview
+              || latestReview.state !== 'APPROVED'
+              || latestReview.commit_id !== pull.head.sha
+            ) {
+              core.setFailed(
+                `@${context.repo.owner} must approve the latest commit (${pull.head.sha}) before this change can merge.`,
+              );
+              return;
+            }
+
+            core.info(`@${context.repo.owner} approved the latest commit.`);
