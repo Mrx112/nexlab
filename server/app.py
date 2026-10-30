@@ -34,7 +34,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.5'
+VERSION = '1.4.6'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -234,22 +234,17 @@ def _version_tuple(value):
     return tuple(int(part) for part in match.groups()) if match else None
 
 
-def _fetch_latest_release():
-    request = urllib.request.Request(
-        _RELEASE_API,
-        headers={
-            'Accept': 'application/vnd.github+json',
-            'User-Agent': 'NexLab-update-check',
-        },
-    )
-    with urllib.request.urlopen(request, timeout=8) as response:
-        payload = json.loads(response.read(1024 * 1024).decode('utf-8'))
-    if not isinstance(payload, dict):
-        raise ValueError('GitHub returned an invalid release response.')
+def _required_assets():
+    asset_name = _UPDATE_ASSETS.get(sys.platform)
+    if asset_name is None:
+        raise ValueError(f'Updates are not available for {sys.platform}.')
+    required = [asset_name]
+    if sys.platform == 'win32':
+        required.extend(('NexLab-Windows-x64.zip', 'NexLab-SHA256SUMS.txt'))
+    return asset_name, required
 
-    tag = payload.get('tag_name')
-    url = payload.get('html_url')
-    assets = payload.get('assets')
+
+def _release_result(tag, url):
     if not isinstance(tag, str) or not _version_tuple(tag):
         raise ValueError('Latest GitHub release has an invalid version tag.')
     parsed_url = urlparse(url) if isinstance(url, str) else None
@@ -263,25 +258,80 @@ def _fetch_latest_release():
         )
     ):
         raise ValueError('Latest GitHub release has an invalid URL.')
-    if not isinstance(assets, list):
-        raise ValueError('Latest GitHub release has no asset list.')
-
-    asset_name = _UPDATE_ASSETS.get(sys.platform)
-    if asset_name is None:
-        raise ValueError(f'Updates are not available for {sys.platform}.')
-    required_assets = [asset_name]
-    if sys.platform == 'win32':
-        required_assets.extend(('NexLab-Windows-x64.zip', 'NexLab-SHA256SUMS.txt'))
-    asset_names = {asset['name'] for asset in assets
-                   if isinstance(asset, dict) and isinstance(asset.get('name'), str)}
-    missing = [name for name in required_assets if name not in asset_names]
-    if missing:
-        raise ValueError('Latest release is missing: ' + ', '.join(missing))
+    asset_name, _ = _required_assets()
     return {
         'version': tag.lstrip('v'),
         'release_url': url,
         'download_url': f'https://github.com/Mrx112/nexlab/releases/latest/download/{asset_name}',
     }
+
+
+def _fetch_latest_release_api():
+    request = urllib.request.Request(
+        _RELEASE_API,
+        headers={
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'NexLab-update-check',
+        },
+    )
+    with urllib.request.urlopen(request, timeout=8) as response:
+        payload = json.loads(response.read(1024 * 1024).decode('utf-8'))
+    if not isinstance(payload, dict):
+        raise ValueError('GitHub returned an invalid release response.')
+    result = _release_result(payload.get('tag_name'), payload.get('html_url'))
+    assets = payload.get('assets')
+    if not isinstance(assets, list):
+        raise ValueError('Latest GitHub release has no asset list.')
+    asset_names = {asset['name'] for asset in assets
+                   if isinstance(asset, dict) and isinstance(asset.get('name'), str)}
+    missing = [name for name in _required_assets()[1] if name not in asset_names]
+    if missing:
+        raise ValueError('Latest release is missing: ' + ', '.join(missing))
+    return result
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _redirect_target(url, method='GET'):
+    """Return the Location of a github.com redirect without following it (None if not a redirect)."""
+    opener = urllib.request.build_opener(_NoRedirect)
+    request = urllib.request.Request(url, method=method, headers={'User-Agent': 'NexLab-update-check'})
+    try:
+        with opener.open(request, timeout=8):
+            return None
+    except urllib.error.HTTPError as error:
+        if error.code in (301, 302, 303, 307, 308):
+            return error.headers.get('Location')
+        if error.code == 404:
+            return None
+        raise
+
+
+def _fetch_latest_release_web():
+    """Fallback without the rate-limited REST API: read the /releases/latest redirect and probe the assets."""
+    location = _redirect_target('https://github.com/Mrx112/nexlab/releases/latest')
+    match = re.fullmatch(r'https://github\.com/Mrx112/nexlab/releases/tag/(v?\d+\.\d+\.\d+)', location or '')
+    if not match:
+        raise ValueError('GitHub tidak mengembalikan rilis terbaru yang valid.')
+    tag = match.group(1)
+    result = _release_result(tag, location)
+    missing = [name for name in _required_assets()[1]
+               if not _redirect_target(f'https://github.com/Mrx112/nexlab/releases/download/{tag}/{name}', 'HEAD')]
+    if missing:
+        raise ValueError('Latest release is missing: ' + ', '.join(missing))
+    return result
+
+
+def _fetch_latest_release():
+    # The REST API allows only 60 unauthenticated calls per hour per IP (shared on office networks),
+    # so fall back to the public release pages when it refuses or is unreachable.
+    try:
+        return _fetch_latest_release_api()
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        return _fetch_latest_release_web()
 
 
 async def update_check(req):
@@ -381,7 +431,7 @@ def _stage_windows_update(latest):
             shutil.copyfile(install_source, install_script_path)
             mode = 'installed'
         else:
-            source_url = f'https://api.github.com/repos/Mrx112/nexlab/zipball/v{version}'
+            source_url = f'https://github.com/Mrx112/nexlab/archive/refs/tags/v{version}.zip'
             _download_update_file(source_url, archive_path, 300 * 1024 * 1024)
             with zipfile.ZipFile(archive_path) as archive:
                 names = archive.namelist()
