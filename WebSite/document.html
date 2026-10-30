@@ -3,194 +3,934 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="description" content="Dokumentasi lengkap aplikasi NexLab — fitur, instalasi, topologi jaringan, dan troubleshooting."/>
-  <title>NexLab — Documentasi</title>
+  <meta name="theme-color" content="#0b0e17"/>
+  <meta name="description" content="Dokumentasi lengkap NexLab — instalasi, editor topologi, CLI, simulasi, perangkat real, peta 3D, dan pemecahan masalah."/>
+  <meta name="author" content="Adi Susilo"/>
+  <title>NexLab Documentasi</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Cpath d='M8 10.5 28 10.5 18 27Z' fill='none' stroke='%23a190ff' stroke-width='2'/%3E%3Ccircle cx='8' cy='10.5' r='3.5' fill='%23a190ff'/%3E%3Ccircle cx='28' cy='10.5' r='3.5' fill='%23a190ff'/%3E%3Ccircle cx='18' cy='27' r='3.5' fill='%2337e6bd'/%3E%3C/svg%3E">
   <style>
     :root {
       --bg: #0b0e17;
       --bg-elev: #121725;
+      --bg-soft: #161c2c;
       --text: #e9ebf5;
+      --body: #cdd5e0;
       --muted: #959eb2;
       --violet: #a190ff;
+      --teal: #37e6bd;
+      --amber: #f5c86b;
+      --red: #f57e8b;
       --border: rgba(195,205,255,.12);
+      --code-bg: rgba(0,0,0,.32);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: ui-font-sans, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
-    header.doc-header { padding: 24px 32px; border-bottom: 1px solid var(--border); background: var(--bg-elev); }
-    header.doc-header a.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; font-weight: 700; font-size: 18px; }
-    nav.doc-nav { padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--bg-elev); position: sticky; top: 0; z-index: 10; }
-    nav.doc-nav ul { display: flex; flex-wrap: wrap; gap: 24px; list-style: none; padding: 12px 0; }
-    nav.doc-nav a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; transition: color .2s; }
-    nav.doc-nav a:hover { color: var(--text); }
-    nav.doc-nav a.active { color: var(--violet); border-bottom: 2px solid var(--violet); }
-    main.doc-main { max-width: 840px; margin: 0 auto; padding: 48px 32px 80px; }
-    h1 { font-size: 36px; letter-spacing: -.8px; margin-bottom: 28px; }
-    h2 { font-size: 24px; margin: 42px 0 18px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-    h2:first-of-type { margin-top: 0; }
-    h3 { font-size: 17px; margin: 24px 0 10px; color: var(--text); }
-    p { margin-bottom: 16px; color: #cdd5e0; font-size: 15px; }
-    code { font-family: "Fira Code", "Courier New", monospace; background: rgba(161,144,255,.12); padding: 2px 6px; border-radius: 4px; color: var(--violet); font-size: 13px; }
-    pre { background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 16px 0; }
-    pre code { background: none; padding: 0; color: #cdd5e0; }
-    ul { margin: 12px 0 16px 24px; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    a { color: var(--violet); }
+    header.doc-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); background: rgba(18,23,37,.94); backdrop-filter: blur(8px); }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; font-weight: 700; font-size: 18px; }
+    .brand svg { width: 28px; height: 28px; fill: none; stroke: var(--violet); stroke-width: 2; }
+    .brand svg circle { fill: var(--violet); stroke: none; }
+    .brand b { color: var(--violet); }
+    .doc-tag { color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; border-left: 1px solid var(--border); padding-left: 14px; }
+    .header-links { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: transparent; cursor: pointer; }
+    .btn:hover { border-color: var(--violet); }
+    .btn.primary { background: var(--violet); border-color: var(--violet); color: #12101f; }
+    .toc-toggle { display: none; }
+    .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1180px; margin: 0 auto; }
+    aside.toc { position: sticky; top: 61px; height: calc(100vh - 61px); overflow-y: auto; padding: 24px 18px 40px 24px; border-right: 1px solid var(--border); }
+    .toc-search { width: 100%; padding: 8px 10px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--text); font-size: 13px; }
+    .toc-group { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 18px 0 6px; }
+    aside.toc ul { list-style: none; }
+    aside.toc a { display: block; padding: 4px 10px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: 13.5px; }
+    aside.toc a:hover { color: var(--text); }
+    aside.toc a.active { color: var(--violet); border-left-color: var(--violet); background: rgba(161,144,255,.07); }
+    main.doc-main { min-width: 0; padding: 40px 48px 80px; }
+    .hero { padding: 28px 30px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(140deg, rgba(40,36,80,.6), rgba(18,26,36,.9)); margin-bottom: 36px; }
+    .hero h1 { font-size: 34px; letter-spacing: -.6px; line-height: 1.2; margin-bottom: 10px; }
+    .hero p { color: var(--body); max-width: 640px; }
+    .hero .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    section.doc { padding-top: 8px; margin-bottom: 44px; }
+    h2 { font-size: 24px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 17px; margin: 26px 0 10px; }
+    h4 { font-size: 15px; margin: 18px 0 8px; color: var(--body); }
+    p { margin-bottom: 14px; color: var(--body); font-size: 15px; }
+    ul, ol { margin: 8px 0 16px 22px; color: var(--body); font-size: 15px; }
     li { margin-bottom: 6px; }
-    .doc-figure { text-align: center; margin: 28px 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); }
-    .doc-figure img { max-width: 100%; border-radius: 6px; }
-    .doc-figure figcaption { color: var(--muted); font-size: 12px; margin-top: 8px; }
-    table.doc-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-    table.doc-table th, table.doc-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
-    table.doc-table th { background: var(--bg-elev); color: var(--muted); font-weight: 600; }
-    table.doc-table code { background: rgba(0,0,0,.3); }
-    .callout { border: 1px solid rgba(161,144,255,.3); background: rgba(161,144,255,.06); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
-    .callout.warning { border-color: rgba(245,126,139,.3); background: rgba(245,126,139,.06); }
-    .callout code { color: #f5ee9d; }
-    .back-link { display: inline-block; margin-top: 32px; color: var(--violet); text-decoration: none; }
-    .back-link:hover { text-decoration: underline; }
-    footer.doc-footer { border-top: 1px solid var(--border); padding: 20px 32px; text-align: center; color: var(--muted); font-size: 12px; }
+    li::marker { color: var(--muted); }
+    b, strong { color: var(--text); }
+    code { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; background: rgba(161,144,255,.12); padding: 1px 6px; border-radius: 4px; color: #c9bfff; font-size: 13px; overflow-wrap: anywhere; }
+    pre { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 12px 0 18px; }
+    pre code { background: none; padding: 0; color: var(--body); font-size: 13px; line-height: 1.6; overflow-wrap: normal; }
+    .copy { position: absolute; top: 8px; right: 8px; padding: 3px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--muted); cursor: pointer; }
+    .copy:hover { color: var(--text); }
+    kbd { font-family: inherit; font-size: 12px; padding: 1px 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--bg-elev); color: var(--text); white-space: nowrap; }
+    .table-wrap { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; color: var(--body); }
+    th { background: var(--bg-elev); color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; }
+    tr:last-child td { border-bottom: 0; }
+    .callout { border: 1px solid rgba(161,144,255,.3); background: rgba(161,144,255,.06); border-radius: 8px; padding: 12px 16px; margin: 16px 0; color: var(--body); font-size: 14.5px; }
+    .callout.tip { border-color: rgba(55,230,189,.3); background: rgba(55,230,189,.05); }
+    .callout.warn { border-color: rgba(245,126,139,.35); background: rgba(245,126,139,.06); }
+    .callout p:last-child { margin-bottom: 0; }
+    .os-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0 20px; }
+    .os-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--bg-elev); }
+    .os-card b { display: block; margin-bottom: 2px; }
+    .os-card small { color: var(--muted); display: block; margin-bottom: 8px; }
+    .os-card code { font-size: 12px; }
+    .steps { counter-reset: step; list-style: none; margin-left: 0; }
+    .steps > li { counter-increment: step; position: relative; padding-left: 38px; margin-bottom: 12px; }
+    .steps > li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #12101f; background: var(--violet); }
+    figure { margin: 20px 0 24px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); text-align: center; }
+    figure img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin: 0 auto; }
+    figcaption { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+    details { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; background: var(--bg-elev); }
+    details summary { cursor: pointer; font-weight: 600; color: var(--text); }
+    details[open] summary { margin-bottom: 8px; }
+    details p:last-child, details ul:last-child { margin-bottom: 0; }
+    .hidden-by-search { display: none !important; }
+    .no-result { display: none; color: var(--muted); font-size: 13px; padding: 4px 10px; }
+    footer.doc-footer { border-top: 1px solid var(--border); padding: 20px 24px; text-align: center; color: var(--muted); font-size: 12.5px; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside.toc { position: fixed; z-index: 15; top: 57px; left: 0; width: min(300px, 86vw); height: calc(100vh - 57px); background: var(--bg-elev); transform: translateX(-100%); transition: transform .2s ease; }
+      aside.toc.open { transform: none; box-shadow: 20px 0 40px rgba(0,0,0,.4); }
+      .toc-toggle { display: inline-flex; }
+      .doc-tag { display: none; }
+      main.doc-main { padding: 24px 16px 60px; }
+      .hero { padding: 20px 18px; }
+      .hero h1 { font-size: 26px; }
+      .os-grid { grid-template-columns: 1fr; }
+      .header-links .btn:not(.toc-toggle):not(.primary) { display: none; }
+      header.doc-header { padding: 12px 16px; }
+    }
   </style>
 </head>
 <body>
   <header class="doc-header">
-    <a class="brand" href="index.html">Nex<span>Lab</span></a>
+    <button class="btn toc-toggle" type="button" id="toc-toggle" aria-expanded="false" aria-controls="toc">☰ Isi</button>
+    <a class="brand" href="index.html" aria-label="NexLab beranda">
+      <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M8 10.5 28 10.5 18 27Z"/><circle cx="8" cy="10.5" r="3.5"/><circle cx="28" cy="10.5" r="3.5"/><circle cx="18" cy="27" r="3.5"/></svg>
+      <span>Nex<b>Lab</b></span>
+    </a>
+    <span class="doc-tag">Dokumentasi</span>
+    <div class="header-links">
+      <a class="btn" href="index.html">Beranda</a>
+      <a class="btn primary" href="index.html#download">↓ Download</a>
+    </div>
   </header>
-  <nav class="doc-nav" id="doc-nav">
-    <ul>
-      <a href="#overview" class="active">Gambaran Umum</a>
-      <a href="#fitur">Fitur</a>
-      <a href="#instalasi">Instalasi</a>
-      <a href="#topologi">Topologi & Bridging</a>
-      <a href="#troubleshooting">Pemecahan Masalah</a>
-    </ul>
-  </nav>
-  <main class="doc-main">
-    <h1>Documentasi NexLab</h1>
 
-    <section id="overview">
-      <h2>Gambaran Umum</h2>
-      <p>NexLab adalah laboratorium jaringan interaktif berbasis web yang memungkinkan Anda merancang topologi, belajar konfigurasi, dan menjalankan simulasi jaringan langsung dari browser.</p>
-      <p>Aplikasi NexLab terdiri dari dua komponen utama:</p>
+  <div class="layout">
+    <aside class="toc" id="toc" aria-label="Daftar isi">
+      <input class="toc-search" id="toc-search" type="search" placeholder="Cari topik… (mis. VLAN, DHCP)" aria-label="Cari topik dokumentasi">
+      <div class="toc-group">Mulai</div>
       <ul>
-        <li><b>Frontend Web</b> — antarmuka pengguna yang dijalankan di browser untuk merancang topologi dan mengakses console perangkat.</li>
-        <li><b>Backend Engine</b> — server Python (aiohttp) yang mengelola simulasi jaringan, console CLI, dan koneksi ke perangkat fisik.</li>
+        <li><a href="#pengenalan">Pengenalan</a></li>
+        <li><a href="#kebutuhan">Kebutuhan sistem</a></li>
+        <li><a href="#instalasi">Download &amp; instalasi</a></li>
+        <li><a href="#menjalankan">Menjalankan NexLab</a></li>
+        <li><a href="#memulai">Akun &amp; lab pertama</a></li>
       </ul>
-    </section>
-
-    <section id="fitur">
-      <h2>Fitur</h2>
-      <h3>Desain Topologi Visual</h3>
-      <p>Seret dan lepas perangkat, sambungkan port, atur VLAN, dan bangun lab sesuai ide Anda tanpa berantakan.</p>
-      <div class="doc-figure">
-        <img src="screenshots/app-topology.png" alt="Antarmuka desain topologi NexLab"/>
-        <figcaption>Antarmuka desainer topologi — tarik perangkat, hubungkan port, dan konfigurasi VLAN.</figcaption>
-      </div>
-
-      <h3>Console Interaktif</h3>
-      <p>Akses console CLI untuk setiap perangkat (Cisco IOS, Huawei, dan lainnya) dengan dukungan mode konfigurasi dan privilege.</p>
-
-      <h3>Simulasi Lengkap</h3>
-      <p>Simulasikan routing (OSPF, BGP, RIP), switching (VLAN, STP), dan layanan jaringan lainnya dengan logika protokol yang akurat.</p>
-      <div class="doc-figure">
-        <img src="screenshots/app-console.png" alt="Console CLI interaktif NexLab"/>
-        <figcaption>Console CLI interaktif — konfigurasi perangkat simulasi seperti perangkat sungguhan.</figcaption>
-      </div>
-
-      <h3>Marketplace Komunitas</h3>
-      <p>Temukan rancangan lab siap pakai dari komunitas, atau jual rancangan Anda sendiri.</p>
-
-      <h3>Pemetaan 3D & Instalasi Fisik</h3>
-      <p>Rencanakan instalasi lapangan nyata dengan peta 3D, jalur kabel, daftar material, dan kalkulasi link budget.</p>
-    </section>
-
-    <section id="instalasi">
-      <h2>Instalasi</h2>
-      <p>Panduan instalasi cepat:</p>
+      <div class="toc-group">Membangun lab</div>
       <ul>
-        <li><b>Windows 10/11</b> — Unduh dan jalankan <code>NexLab-Setup-Windows.cmd</code>, ikuti langkah verifikasi SHA-256.</li>
-        <li><b>macOS (Intel &amp; Apple Silicon)</b> — Unduh dan jalankan <code>NexLab-Setup-macOS.command</code>, pilih Open saat diminta.</li>
-        <li><b>Linux (x86_64)</b> — Unduh dan jalankan <code>NexLab-Setup-Linux.sh</code>.</li>
+        <li><a href="#editor">Editor topologi</a></li>
+        <li><a href="#perangkat">Katalog perangkat</a></li>
+        <li><a href="#cli">Console &amp; CLI</a></li>
+        <li><a href="#end-device">PC, server &amp; script</a></li>
+        <li><a href="#tutorial">Tutorial: VLAN &amp; DHCP</a></li>
+        <li><a href="#routing">Tutorial: OSPF</a></li>
+        <li><a href="#acl">ACL, SSH &amp; NAT</a></li>
+        <li><a href="#wireless">Wi-Fi &amp; FTTH</a></li>
       </ul>
-      <p>Setiap installer diunduh dari <a href="index.html#download">halaman download NexLab</a> dan secara otomatis memasang aplikasi beserta shortcut. File yang diunduh adalah paket rilis yang terverifikasi, bukan kode sumber.</p>
-      <p>Setelah instalasi, jalankan NexLab dari shortcut aplikasi atau folder instalasi. Server backend akan otomatis berjalan dan membuka antarmuka di browser.</p>
+      <div class="toc-group">Fitur lanjutan</div>
+      <ul>
+        <li><a href="#simulasi">Mode simulasi &amp; PDU</a></li>
+        <li><a href="#workbook">Workbook &amp; penilaian</a></li>
+        <li><a href="#peta3d">Peta 3D &amp; material</a></li>
+        <li><a href="#claude">Integrasi Claude AI</a></li>
+        <li><a href="#real">Perangkat real &amp; QEMU</a></li>
+        <li><a href="#fisik">Perangkat fisik</a></li>
+      </ul>
+      <div class="toc-group">Administrasi</div>
+      <ul>
+        <li><a href="#sistem">Status sistem &amp; update</a></li>
+        <li><a href="#pengguna">Manajemen pengguna</a></li>
+        <li><a href="#jaringan">Akses dari jaringan</a></li>
+        <li><a href="#data">Data &amp; cadangan</a></li>
+        <li><a href="#masalah">Pemecahan masalah</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#dukungan">Donasi &amp; masukan</a></li>
+      </ul>
+      <p class="no-result" id="no-result">Topik tidak ditemukan.</p>
+    </aside>
 
-      <div class="callout">
-        <b>Penting:</b> Pastikan Python 3.10+ tersedia bila menjalankan dari sumber. Backend menggunakan <a href="https://docs.aiohttp.org/" target="_blank">aiohttp</a> dan <a href="https://asyncssh.readthedocs.io/" target="_blank">asyncssh</a> (opsional, untuk koneksi SSH ke perangkat fisik).
-      </div>
-    </section>
-
-    <section id="topologi">
-      <h2>Topologi & Bridging</h2>
-      <p>NexLab mendukung dua mode jaringan:</p>
-      <table class="doc-table">
-        <thead>
-          <tr><th>Fitur</th><th>Simulasi</th><th>Real</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Lingkup jaringan</td><td>192.168.1.0/24 (virtual)</td><td>192.168.137.0/24 (fisik host)</td></tr>
-          <tr><td>Interface utama</td><td>virbr0 (Linux/macOS)</td><td>vEthernet (Windows) / bridge0 (macOS)</td></tr>
-          <tr><td>Bridge ke host</td><td>Tidak</td><td>Ya (opsional)</td></tr>
-          <tr><td>Penggunaan</td><td>Belajar & eksperimen mandiri</td><td>Integrasi dengan jaringan fisik</td></tr>
-        </tbody>
-      </table>
-
-      <h3>Menghubungkan ke Jaringan Fisik</h3>
-      <p>Mode <b>real</b> memungkinkan perangkat simulasi berkomunikasi dengan perangkat fisik di jaringan lokal host:</p>
-
-      <h4>Linux</h4>
-      <pre><code>sudo ip link set enp0s3 promisc on
-sudo ip link set tap0 up
-sudo ip link set tap0 master br0</code></pre>
-
-      <h4>Windows</h4>
-      <pre><code>netsh interface set interface "Ethernet" admin=enabled
-netsh advfirewall firewall add rule name="NexLab ICMP" dir=in action=allow protocol=icmpv4
-netsh interface ipv4 add address "vEthernet (Default Switch)" 192.168.137.1 255.255.255.0</code></pre>
-
-      <h4>macOS</h4>
-      <pre><code>sudo ifconfig bridge0 create
-sudo ifconfig bridge0 addm en0
-sudo ifconfig bridge0 up</code></pre>
-
-      <div class="callout warning">
-        <b>Catatan:</b> Bridging memerlukan hak istimewa administrator. Pada Windows, pastikan <a href="https://learn.microsoft.com/windows-server/networking/technologies/remote-access/wdv-configure-remote-access-desktop" target="_blank">ICS (Internet Connection Sharing)</a> diaktifkan agar perangkat virtual dapat mengakses internet.
+    <main class="doc-main" id="main">
+      <div class="hero">
+        <h1>Dokumentasi NexLab</h1>
+        <p>Panduan lengkap memasang NexLab, membangun topologi jaringan, mengonfigurasi perangkat lewat CLI, menjalankan simulasi, sampai menghubungkan lab ke perangkat sungguhan.</p>
+        <div class="actions">
+          <a class="btn primary" href="#instalasi">Mulai instalasi →</a>
+          <a class="btn" href="#tutorial">Tutorial pertama</a>
+          <a class="btn" href="#masalah">Pemecahan masalah</a>
+        </div>
       </div>
 
-      <h3>Spanning Tree (PortFast)</h3>
-      <p>Port yang menghubungkan ke host fisik akan secara otomatis di-setup sebagai PortFast agar tidak ada delay pembelajaran MAC saat bridging:</p>
-      <pre><code>interface GigabitEthernet0/1
- spanning-tree portfast
- spanning-tree bpduguard enable</code></pre>
-    </section>
+      <!-- ===================================================== PENGENALAN -->
+      <section class="doc" id="pengenalan">
+        <h2>Pengenalan</h2>
+        <p><b>NexLab</b> adalah lab jaringan pribadi yang berjalan di komputer Anda sendiri dan dibuka lewat browser. Gaya kerjanya memadukan editor topologi ala Packet Tracer dengan kemampuan node real ala PNETLab.</p>
+        <p>NexLab terdiri dari dua bagian yang terpasang sekaligus oleh installer:</p>
+        <ul>
+          <li><b>Server NexLab</b> — aplikasi yang berjalan di komputer Anda. Server menyimpan akun dan lab, menjalankan mesin simulasi jaringan, serta melayani console perangkat.</li>
+          <li><b>Antarmuka web</b> — dibuka di browser (Chrome, Edge, Firefox, Safari). Bisa dari komputer yang sama, atau dari laptop/HP lain di jaringan yang sama.</li>
+        </ul>
+        <h3>Dua jenis node</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Jenis</th><th>Contoh</th><th>Sifat</th></tr></thead>
+          <tbody>
+            <tr><td><b>Simulasi</b></td><td>Router, switch, firewall, PC, server, AP, OLT</td><td>Emulasi CLI ala Cisco IOS. Sangat ringan (hampir 0 MB RAM per node), tanpa hak administrator, berjalan di semua OS.</td></tr>
+            <tr><td><b>Real</b></td><td>QEMU VM, Linux Host, Cloud, Perangkat Fisik</td><td>Menjalankan sistem/paket sungguhan atau terhubung ke jaringan fisik. Beberapa fitur butuh Linux dengan hak root.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout"><p><b>Catatan jujur:</b> node simulasi adalah emulasi CLI, bukan IOS asli, dan tidak mengirim paket ke jaringan fisik. Untuk lalu lintas nyata, gunakan node QEMU/Linux Host yang dikabelkan ke node Cloud.</p></div>
+        <figure>
+          <img src="screenshots/app-topology.png" alt="Editor topologi NexLab dengan router, switch, dan PC" width="821" height="581" loading="lazy">
+          <figcaption>Editor topologi: perangkat, kabel antar port, dan lampu status link.</figcaption>
+        </figure>
+      </section>
 
-    <section id="troubleshooting">
-      <h2>Pemecahan Masalah</h2>
-      <h3>Port tidak dapat terhubung</h3>
-      <p>Pastikan port berstatus <code>LISTENING</code> atau <code>LEARNING</code> sebelum beralih ke <code>FORWARDING</code>. Jika stuck, periksa subnet otomatis dan pastikan tidak ada konflik IP.</p>
+      <!-- ===================================================== KEBUTUHAN -->
+      <section class="doc" id="kebutuhan">
+        <h2>Kebutuhan sistem</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Komponen</th><th>Minimum</th><th>Disarankan</th></tr></thead>
+          <tbody>
+            <tr><td>Sistem operasi</td><td>Windows 10/11 x64, macOS 12+ (Intel/Apple Silicon), Linux x86_64 berbasis glibc</td><td>Versi terbaru dengan pembaruan keamanan</td></tr>
+            <tr><td>RAM</td><td>2 GB (lab simulasi, ±60 MB untuk NexLab)</td><td>8 GB+ bila menjalankan QEMU VM</td></tr>
+            <tr><td>Penyimpanan</td><td>300 MB untuk aplikasi</td><td>Tambahan sesuai ukuran image QEMU</td></tr>
+            <tr><td>Browser</td><td>Chrome/Edge/Firefox/Safari versi terkini</td><td>Layar ≥ 1280 px untuk editor</td></tr>
+          </tbody>
+        </table></div>
+        <p>Python atau dependensi lain <b>tidak perlu dipasang</b> — semuanya sudah termasuk di dalam paket aplikasi.</p>
+        <p>Untuk fitur real (opsional): Linux dengan hak root dan <code>iproute2</code>; untuk VM tambahkan <code>qemu-system-x86</code> dan <code>qemu-utils</code>, sebaiknya CPU dengan dukungan KVM. Di Windows/macOS, QEMU dapat dipasang terpisah dan dipakai dengan jaringan NAT.</p>
+      </section>
 
-      <h3>Bridge fisik tidak berfungsi</h3>
-      <p>Pastikan firewall mengizinkan ICMP dan protokol lainnya. Di Windows gunakan aturan firewall di atas; di Linux pastikan <code>iptables</code> tidak memblokir paket.</p>
+      <!-- ===================================================== INSTALASI -->
+      <section class="doc" id="instalasi">
+        <h2>Download &amp; instalasi</h2>
+        <p>Unduh installer sesuai sistem operasi dari bagian <a href="index.html#download">Download di website NexLab</a>. Installer berukuran kecil: saat dijalankan, ia mengambil paket aplikasi resmi, <b>memverifikasi checksum SHA-256</b>, memasang NexLab, membuat shortcut, lalu membukanya.</p>
+        <div class="os-grid">
+          <div class="os-card"><b>Windows 10 / 11</b><small>x64</small><code>NexLab-Setup-Windows.cmd</code></div>
+          <div class="os-card"><b>macOS</b><small>Apple Silicon &amp; Intel</small><code>NexLab-Setup-macOS.command</code></div>
+          <div class="os-card"><b>Linux</b><small>x86_64, tanpa root</small><code>NexLab-Setup-Linux.sh</code></div>
+        </div>
+        <p><a class="btn primary" href="index.html#download">↓ Buka halaman download</a></p>
 
-      <h3>ARP tidak merespons</h3>
-      <p>Di mode <b>real</b>, Pastikan ARP request dari node virtual di-broadcast ke jaringan fisik melalui TAP interface dengan mode promiscuous yang benar.</p>
-    </section>
+        <h3>Windows</h3>
+        <ol class="steps">
+          <li>Klik <b>Windows 10 / 11</b> di halaman download untuk mengunduh <code>NexLab-Setup-Windows.cmd</code>.</li>
+          <li>Buka folder <b>Downloads</b> dan klik ganda file tersebut. Jika muncul <i>Windows protected your PC</i> (SmartScreen), pilih <b>More info → Run anyway</b>.</li>
+          <li>Tunggu jendela installer selesai mengunduh dan memverifikasi paket. NexLab dipasang di <code>%LOCALAPPDATA%\Programs\NexLab</code>.</li>
+          <li>Shortcut <b>NexLab</b> dibuat di Desktop dan Start Menu, lalu aplikasi terbuka otomatis di browser.</li>
+          <li>Jika Windows Firewall bertanya, pilih <b>Allow access</b> agar NexLab bisa dibuka dari perangkat lain di jaringan.</li>
+        </ol>
 
-    <a class="back-link" href="index.html">← Kembali ke Beranda</a>
-  </main>
+        <h3>macOS</h3>
+        <ol class="steps">
+          <li>Klik <b>macOS</b> di halaman download untuk mengunduh <code>NexLab-Setup-macOS.command</code>.</li>
+          <li>Buka aplikasi <b>Terminal</b>, lalu jalankan (sesuaikan bila folder unduhan berbeda):
+            <pre><code>bash ~/Downloads/NexLab-Setup-macOS.command</code></pre></li>
+          <li>Installer memilih paket sesuai prosesor (Apple Silicon atau Intel), memasang <code>NexLab.app</code> di <code>~/Applications</code>, membuat alias di Desktop, lalu membukanya.</li>
+          <li>Aplikasi belum ditandatangani Apple. Jika muncul peringatan, klik kanan <code>NexLab.app</code> → <b>Open</b> → <b>Open</b>, atau izinkan lewat <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</li>
+        </ol>
+
+        <h3>Linux</h3>
+        <ol class="steps">
+          <li>Klik <b>Linux</b> di halaman download untuk mengunduh <code>NexLab-Setup-Linux.sh</code>.</li>
+          <li>Pastikan alat dasar tersedia (biasanya sudah ada). Contoh untuk Ubuntu/Debian:
+            <pre><code>sudo apt install curl tar coreutils procps</code></pre></li>
+          <li>Jalankan installer sebagai pengguna biasa (tanpa <code>sudo</code>):
+            <pre><code>bash ~/Downloads/NexLab-Setup-Linux.sh</code></pre></li>
+          <li>NexLab dipasang di <code>~/.local/opt/nexlab</code>, perintah <code>nexlab</code> dibuat di <code>~/.local/bin</code>, serta pintasan di menu aplikasi dan Desktop.</li>
+        </ol>
+
+        <h3>Memperbarui &amp; menghapus</h3>
+        <ul>
+          <li><b>Memperbarui:</b> tutup NexLab, unduh installer terbaru dari website, lalu jalankan lagi. Di Windows, admin juga dapat memperbarui langsung dari <a href="#sistem">Status sistem</a>. Data lab dan akun tidak ikut terhapus.</li>
+          <li><b>Menghapus aplikasi:</b> hapus folder instalasi (<code>%LOCALAPPDATA%\Programs\NexLab</code>, <code>~/Applications/NexLab.app</code>, atau <code>~/.local/opt/nexlab</code>) beserta shortcut-nya. Hapus juga <a href="#data">folder data</a> bila ingin menghapus seluruh lab.</li>
+        </ul>
+      </section>
+
+      <!-- ===================================================== MENJALANKAN -->
+      <section class="doc" id="menjalankan">
+        <h2>Menjalankan NexLab</h2>
+        <p>Buka NexLab dari shortcut Desktop/Start Menu (Windows), <code>NexLab.app</code> (macOS), atau menu aplikasi / perintah <code>nexlab</code> (Linux). Server berjalan, animasi pembuka diputar, lalu browser membuka dashboard.</p>
+        <ul>
+          <li>Alamat lokal: <code>http://localhost:8080/</code></li>
+          <li>Alamat untuk perangkat lain di jaringan yang sama tampil di jendela server dan di halaman <b>Status sistem</b>, misalnya <code>http://192.168.1.20:8080/</code>.</li>
+          <li>Menutup jendela server (atau <kbd>Ctrl</kbd>+<kbd>C</kbd>) menghentikan NexLab. Lab tersimpan otomatis.</li>
+        </ul>
+        <h3>Opsi baris perintah</h3>
+        <p>Aplikasi menerima opsi berikut bila dijalankan dari terminal:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Opsi</th><th>Fungsi</th></tr></thead>
+          <tbody>
+            <tr><td><code>--port 8090</code></td><td>Ganti port bila 8080 sudah dipakai aplikasi lain.</td></tr>
+            <tr><td><code>--host 127.0.0.1</code></td><td>Hanya bisa dibuka dari komputer ini (default <code>0.0.0.0</code> = semua jaringan).</td></tr>
+            <tr><td><code>--data &lt;folder&gt;</code></td><td>Lokasi database, image, dan file runtime.</td></tr>
+            <tr><td><code>--cert file.pem --key key.pem</code></td><td>Aktifkan HTTPS dengan sertifikat sendiri.</td></tr>
+            <tr><td><code>--open</code></td><td>Buka browser otomatis setelah server siap (dipakai shortcut).</td></tr>
+          </tbody>
+        </table></div>
+        <p>Contoh di Linux: <code>nexlab --port 8090</code>. Variabel lingkungan <code>NEXLAB_PORT</code> dan <code>NEXLAB_DATA</code> juga dikenali.</p>
+      </section>
+
+      <!-- ===================================================== MEMULAI -->
+      <section class="doc" id="memulai">
+        <h2>Akun &amp; lab pertama</h2>
+        <ol class="steps">
+          <li>Di halaman login, pilih tab <b>Daftar</b>. Akun pertama yang dibuat otomatis menjadi <b>admin</b>.</li>
+          <li>Username 3–32 karakter (huruf kecil, angka, <code>. _ -</code>), password minimal 6 karakter. Centang <b>Ingat saya 30 hari</b> agar tidak perlu login ulang.</li>
+          <li>Di halaman <b>Main</b>, klik <b>Lab baru</b>, beri nama, lalu pilih template.</li>
+          <li>Lab terbuka di editor. Semua perubahan disimpan otomatis.</li>
+        </ol>
+        <h3>Template lab bawaan</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Template</th><th>Isi</th></tr></thead>
+          <tbody>
+            <tr><td>Lab kosong</td><td>Kanvas kosong untuk membangun dari nol.</td></tr>
+            <tr><td>Latihan LAN dasar</td><td>Router, switch, dan PC yang sudah dikabelkan tetapi belum dikonfigurasi.</td></tr>
+            <tr><td>Latihan OSPF 3 site</td><td>Tiga router antar site untuk latihan routing dinamis.</td></tr>
+            <tr><td>Demo lengkap terkonfigurasi</td><td>Router-on-a-stick VLAN 10/20, OSPF R1–R2, DHCP pool GUEST, DNS di server, ACL 110, SSH ke R1, telnet ke R2.</td></tr>
+            <tr><td>Rumah FTTH + WiFi</td><td>Server ISP – router ISP – OLT – ODP 1:8 – ONT – router rumah – AP WiFi dengan laptop, HP, PC, CCTV, dan script <code>cek-internet</code>.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout tip"><p><b>Kredensial lab demo:</b> SSH ke R1 <code>admin</code> / <code>admin123</code>, telnet ke R2 password <code>cisco</code>, enable secret R1 <code>cisco</code>. WiFi template FTTH: SSID <code>Rumah-WiFi</code>, password <code>rumah12345</code>. Ini hanya data latihan di dalam lab.</p></div>
+        <figure>
+          <img src="screenshots/app-labs.png" alt="Halaman daftar lab NexLab" width="821" height="581" loading="lazy">
+          <figcaption>Halaman Main: daftar lab dengan pratinjau topologi dan jumlah node menyala.</figcaption>
+        </figure>
+        <h3>Ekspor &amp; impor lab</h3>
+        <p>Dari menu lab, pilih <b>Ekspor</b> untuk mengunduh file <code>.nexlab.json</code> (topologi, konfigurasi, workbook, peta 3D). Gunakan <b>Impor</b> di halaman Main untuk memuatnya di komputer lain. File yang sama juga bisa dibagikan di Marketplace website.</p>
+      </section>
+
+      <!-- ===================================================== EDITOR -->
+      <section class="doc" id="editor">
+        <h2>Editor topologi</h2>
+        <h3>Menambah perangkat</h3>
+        <ul>
+          <li>Klik kanan kanvas → <b>Node…</b>, atau sidebar kiri → <b>Tambah objek → Node</b>. Pilih jenis, jumlah, dan nama.</li>
+          <li>Seret node untuk memindahkan; roda mouse untuk zoom; seret area kosong untuk menggeser kanvas.</li>
+        </ul>
+        <h3>Memasang kabel</h3>
+        <ol class="steps">
+          <li>Tekan <kbd>C</kbd> (atau menu <b>Kabel / koneksi</b>).</li>
+          <li>Klik perangkat pertama dan pilih interface, lalu klik perangkat kedua dan pilih interface tujuan.</li>
+          <li>Lampu link: <b style="color:var(--teal)">hijau</b> = up, <b style="color:var(--amber)">kuning</b> = sedang naik/tidak sinkron, <b style="color:var(--red)">merah</b> = down/mati. Kabel putus-putus kuning menandakan sambungan dokumentasi (simulasi ↔ real).</li>
+        </ol>
+        <h3>Menyalakan &amp; console</h3>
+        <ul>
+          <li>Pilih node lalu <b>Start</b> di panel inspektor, atau klik kanan kanvas → <b>Nyalakan semua node</b>.</li>
+          <li>Klik ganda node untuk membuka <b>console</b> di jendela mengambang. Bisa membuka banyak console sekaligus atau di tab baru.</li>
+          <li><b>Wipe</b> mengembalikan node ke kondisi awal (menghapus running-config dan disk overlay VM).</li>
+        </ul>
+        <h3>Panel inspektor</h3>
+        <p>Menampilkan detail node terpilih: power, konfigurasi IP PC (static/DHCP), layanan server (DHCP, DNS, HTTP), uji ping cepat dengan animasi paket, serta tampilan <code>running-config</code> dan <code>startup-config</code>.</p>
+        <h3>Objek gambar</h3>
+        <p>Tambahkan catatan, teks bebas, persegi, elips, garis, dan gambar latar. Kabel dapat diberi warna, gaya, dan ketebalan; ikon node dapat diubah ukurannya dan posisi labelnya.</p>
+        <h3>Pintasan keyboard</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tombol</th><th>Aksi</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>C</kbd></td><td>Mode kabel</td></tr>
+            <tr><td><kbd>N</kbd></td><td>Teks bebas</td></tr>
+            <tr><td><kbd>I</kbd></td><td>Alat Inspect (tabel routing, ARP, MAC, VLAN, ACL)</td></tr>
+            <tr><td><kbd>D</kbd></td><td>Alat Delete</td></tr>
+            <tr><td><kbd>P</kbd></td><td>Tambah PDU sederhana</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>S</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd></td><td>Mode Simulasi / Realtime</td></tr>
+            <tr><td><kbd>Spasi</kbd></td><td>Putar/jeda simulasi</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+            <tr><td><kbd>Del</kbd> / <kbd>Backspace</kbd></td><td>Hapus objek terpilih</td></tr>
+            <tr><td><kbd>+</kbd> / <kbd>-</kbd> / <kbd>F</kbd></td><td>Zoom in / zoom out / pas layar</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Batalkan alat aktif</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>Buka/tutup panel Panduan</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Daftar semua pintasan</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <!-- ===================================================== PERANGKAT -->
+      <section class="doc" id="perangkat">
+        <h2>Katalog perangkat</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Perangkat</th><th>Jenis</th><th>Kemampuan</th></tr></thead>
+          <tbody>
+            <tr><td>Router (ISR4331)</td><td>Simulasi</td><td>Interface GigabitEthernet0/0–0/3 &amp; sub-interface 802.1Q, static route, OSPF, RIP, DHCP server &amp; relay, ACL standard/extended, loopback, telnet/SSH</td></tr>
+            <tr><td>Firewall</td><td>Simulasi</td><td>Router IOS dengan ACL masuk/keluar per interface</td></tr>
+            <tr><td>Switch L2 (2960)</td><td>Simulasi</td><td>VLAN, access/trunk, native &amp; allowed VLAN, <code>interface range</code>, SVI manajemen, MAC table, CDP</td></tr>
+            <tr><td>Switch L3 (3650)</td><td>Simulasi</td><td>Semua fitur L2 + <code>ip routing</code>, SVI inter-VLAN, <code>no switchport</code>, OSPF/RIP</td></tr>
+            <tr><td>PC, Laptop, Server</td><td>Simulasi</td><td>Command Prompt: <code>ipconfig</code>, <code>ping</code>, <code>tracert</code>, <code>nslookup</code>, <code>arp</code>, <code>telnet</code>, <code>ssh</code>, <code>curl</code>; server punya DHCP, DNS, HTTP</td></tr>
+            <tr><td>Printer, IP Phone, Kamera CCTV</td><td>Simulasi</td><td>End device dengan Command Prompt</td></tr>
+            <tr><td>Smartphone, Tablet, IoT</td><td>Simulasi</td><td>Klien WiFi (port Wireless0), perintah <code>wifi &lt;ssid&gt; &lt;password&gt;</code></td></tr>
+            <tr><td>Access Point</td><td>Pasif</td><td>SSID, WPA2/WPA3/Open, channel; klien hanya tersambung bila SSID &amp; password cocok</td></tr>
+            <tr><td>OLT</td><td>Simulasi</td><td>CLI switch dengan port GPON</td></tr>
+            <tr><td>ODP / Splitter, ONT</td><td>Pasif</td><td>Splitter 1:2–1:16; ONT sebagai bridge</td></tr>
+            <tr><td>Hub, Cloud</td><td>Pasif / Real</td><td>Satu segmen bersama; Cloud dapat di-bridge ke NIC fisik</td></tr>
+            <tr><td>QEMU VM</td><td>Real</td><td>Menjalankan image asli (vIOS, CSR1000v, vEOS, MikroTik CHR, VyOS, pfSense, Linux…)</td></tr>
+            <tr><td>Linux Host</td><td>Real</td><td>Network namespace dengan stack TCP/IP asli dan shell bash (Linux, root)</td></tr>
+            <tr><td>Perangkat Fisik</td><td>Remote</td><td>Console Telnet/SSH dari browser ke perangkat sungguhan di LAN</td></tr>
+          </tbody>
+        </table></div>
+        <p>Perangkat <b>pasif</b> (AP, ODP, ONT, Hub, Cloud) tidak memiliki console; pengaturannya ada di panel inspektor.</p>
+      </section>
+
+      <!-- ===================================================== CLI -->
+      <section class="doc" id="cli">
+        <h2>Console &amp; CLI</h2>
+        <p>Console router/switch meniru Cisco IOS. Fitur bantu yang tersedia:</p>
+        <ul>
+          <li>Singkatan perintah: <code>sh ip int br</code>, <code>conf t</code>, <code>int g0/0</code>.</li>
+          <li><kbd>?</kbd> untuk bantuan konteks, <kbd>Tab</kbd> untuk melengkapi, panah atas/bawah untuk riwayat.</li>
+          <li><code>do</code> di mode konfigurasi, filter <code>| include</code>, <code>| exclude</code>, <code>| begin</code>, <code>| section</code>.</li>
+          <li>Password console/enable/vty, <code>write memory</code>, <code>copy run start</code>, <code>reload</code>, <code>erase startup-config</code>.</li>
+        </ul>
+        <h3>Mode CLI</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Prompt</th><th>Mode</th><th>Masuk dengan</th></tr></thead>
+          <tbody>
+            <tr><td><code>R1&gt;</code></td><td>User EXEC</td><td>Saat console dibuka</td></tr>
+            <tr><td><code>R1#</code></td><td>Privileged EXEC</td><td><code>enable</code></td></tr>
+            <tr><td><code>R1(config)#</code></td><td>Global config</td><td><code>configure terminal</code></td></tr>
+            <tr><td><code>R1(config-if)#</code></td><td>Interface</td><td><code>interface GigabitEthernet0/0</code></td></tr>
+            <tr><td><code>R1(config-router)#</code></td><td>Routing</td><td><code>router ospf 1</code></td></tr>
+          </tbody>
+        </table></div>
+        <h3>Perintah show yang sering dipakai</h3>
+        <pre><code>show ip interface brief
+show running-config
+show ip route
+show vlan brief
+show interfaces trunk
+show mac address-table
+show cdp neighbors
+show ip ospf neighbor
+show access-lists
+show ip dhcp binding</code></pre>
+        <h3>Konfigurasi dasar router</h3>
+        <pre><code>enable
+configure terminal
+hostname R1
+enable secret cisco
+interface GigabitEthernet0/0
+ ip address 192.168.1.1 255.255.255.0
+ no shutdown
+exit
+ip route 0.0.0.0 0.0.0.0 10.0.0.2
+end
+write memory</code></pre>
+        <div class="callout"><p>Konfigurasi yang belum disimpan dengan <code>write memory</code> hilang saat node dimatikan atau di-<code>reload</code>.</p></div>
+      </section>
+
+      <!-- ===================================================== END DEVICE -->
+      <section class="doc" id="end-device">
+        <h2>PC, server &amp; script</h2>
+        <h3>Mengatur IP</h3>
+        <p>Pilih PC → panel inspektor → isi IP, subnet mask, gateway, DNS, atau pilih <b>DHCP</b>. Bisa juga lewat Command Prompt:</p>
+        <pre><code>ipconfig
+ipconfig /renew
+ping 192.168.10.1
+tracert 8.8.8.8
+nslookup www.lab.local
+arp -a</code></pre>
+        <h3>Layanan server</h3>
+        <ul>
+          <li><b>DHCP</b> — alamat awal, jumlah maksimum, gateway, DNS.</li>
+          <li><b>DNS</b> — daftar record nama → IP.</li>
+          <li><b>HTTP</b> — isi <code>index.html</code> sendiri; dari PC jalankan <code>curl http://192.168.10.10/</code> atau <code>browser www.lab.local</code>.</li>
+        </ul>
+        <h3>Script otomatis</h3>
+        <p>Setiap PC/server punya panel <b>Script</b>. Jalankan dari panel, atau dari console dengan <code>script</code> / <code>run &lt;nama&gt;</code>.</p>
+        <pre><code>set gw 192.168.10.1
+echo Menguji gateway ${gw}
+repeat 3
+  ping ${gw}
+  sleep 1
+end
+if ping 8.8.8.8
+  echo Internet OK
+else
+  echo Internet putus
+end</code></pre>
+        <p>Perintah yang didukung: <code>echo</code>, <code>set</code>, <code>${var}</code>, <code>sleep</code>, <code>repeat … end</code>, <code>if ping … else … end</code>, dan semua perintah Command Prompt. Script dihentikan otomatis setelah 120 detik.</p>
+      </section>
+
+      <!-- ===================================================== TUTORIAL VLAN -->
+      <section class="doc" id="tutorial">
+        <h2>Tutorial: VLAN, router-on-a-stick &amp; DHCP</h2>
+        <p>Topologi: <b>R1</b> (G0/0) — <b>SW1</b> (G0/1) trunk; PC1 di Fa0/1 (VLAN 10), PC2 di Fa0/2 (VLAN 20). Buat dari template <i>Latihan LAN dasar</i> atau tambahkan sendiri, lalu nyalakan semua node.</p>
+        <h3>1. Switch: VLAN dan trunk</h3>
+        <pre><code>enable
+configure terminal
+vlan 10
+ name STAFF
+vlan 20
+ name GUEST
+interface FastEthernet0/1
+ switchport mode access
+ switchport access vlan 10
+interface FastEthernet0/2
+ switchport mode access
+ switchport access vlan 20
+interface GigabitEthernet0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+end
+write memory</code></pre>
+        <h3>2. Router: sub-interface 802.1Q</h3>
+        <pre><code>enable
+configure terminal
+interface GigabitEthernet0/0
+ no shutdown
+interface GigabitEthernet0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+interface GigabitEthernet0/0.20
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+end</code></pre>
+        <h3>3. Router: DHCP untuk dua VLAN</h3>
+        <pre><code>configure terminal
+ip dhcp excluded-address 192.168.10.1 192.168.10.9
+ip dhcp excluded-address 192.168.20.1 192.168.20.9
+ip dhcp pool STAFF
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 192.168.10.10
+ip dhcp pool GUEST
+ network 192.168.20.0 255.255.255.0
+ default-router 192.168.20.1
+end
+write memory</code></pre>
+        <h3>4. Uji</h3>
+        <ol>
+          <li>Set PC1 dan PC2 ke <b>DHCP</b> di panel inspektor, atau jalankan <code>ipconfig /renew</code>.</li>
+          <li>Dari PC1: <code>ping 192.168.20.x</code> (IP PC2). Ping pertama bisa hilang karena ARP — itu normal.</li>
+          <li>Di R1: <code>show ip dhcp binding</code>; di SW1: <code>show interfaces trunk</code>.</li>
+        </ol>
+        <div class="callout tip"><p>Jika DHCP server berada di subnet lain, tambahkan <code>ip helper-address &lt;IP-server&gt;</code> pada interface gateway VLAN.</p></div>
+      </section>
+
+      <!-- ===================================================== ROUTING -->
+      <section class="doc" id="routing">
+        <h2>Tutorial: routing statis &amp; OSPF</h2>
+        <h3>Routing statis</h3>
+        <pre><code>ip route 192.168.30.0 255.255.255.0 10.0.12.2
+ip route 0.0.0.0 0.0.0.0 10.0.12.2</code></pre>
+        <h3>OSPF area 0</h3>
+        <p>Jalankan di setiap router, sesuaikan jaringan yang terhubung:</p>
+        <pre><code>router ospf 1
+ router-id 1.1.1.1
+ network 192.168.10.0 0.0.0.255 area 0
+ network 10.0.12.0 0.0.0.3 area 0
+ passive-interface GigabitEthernet0/0
+end</code></pre>
+        <p>Verifikasi dengan <code>show ip ospf neighbor</code> dan <code>show ip route</code> (route OSPF ditandai <code>O</code>). RIP juga tersedia: <code>router rip</code>, <code>version 2</code>, <code>network 10.0.0.0</code>.</p>
+        <p>Kalkulator <b>subnet/wildcard</b> tersedia di panel Panduan (<kbd>F1</kbd>).</p>
+      </section>
+
+      <!-- ===================================================== ACL -->
+      <section class="doc" id="acl">
+        <h2>ACL, SSH &amp; NAT</h2>
+        <h3>ACL extended</h3>
+        <p>Contoh: blokir SSH dari VLAN GUEST ke server farm, izinkan lainnya.</p>
+        <pre><code>access-list 110 deny tcp 192.168.20.0 0.0.0.255 192.168.50.0 0.0.0.255 eq 22
+access-list 110 permit ip any any
+interface GigabitEthernet0/0.20
+ ip access-group 110 in</code></pre>
+        <p>Ping memperhitungkan ACL di kedua arah. Cek hit counter dengan <code>show access-lists</code>.</p>
+        <h3>SSH ke router</h3>
+        <pre><code>hostname R1
+ip domain-name lab.local
+crypto key generate rsa
+username admin secret admin123
+line vty 0 4
+ login local
+ transport input ssh</code></pre>
+        <p>Dari PC: <code>ssh -l admin 192.168.10.1</code>. Untuk telnet: <code>line vty 0 4</code> → <code>password cisco</code> → <code>login</code>.</p>
+        <h3>NAT overload (PAT)</h3>
+        <p>Router simulasi menerima dan menyimpan perintah NAT di running-config, tetapi translasi alamat belum disimulasikan. Untuk menguji NAT yang benar-benar bekerja, gunakan router QEMU (vIOS/CSR1000v) atau perangkat asli.</p>
+        <pre><code>access-list 1 permit 192.168.10.0 0.0.0.255
+interface GigabitEthernet0/0.10
+ ip nat inside
+interface GigabitEthernet0/1
+ ip nat outside
+ip nat inside source list 1 interface GigabitEthernet0/1 overload</code></pre>
+      </section>
+
+      <!-- ===================================================== WIRELESS -->
+      <section class="doc" id="wireless">
+        <h2>Wi-Fi &amp; FTTH</h2>
+        <h3>Access Point dan klien</h3>
+        <ol>
+          <li>Kabelkan AP ke switch, lalu atur SSID, keamanan (WPA2/WPA3/Open), password, dan channel di panel inspektor AP.</li>
+          <li>Pada laptop/HP/tablet, isi SSID dan password di inspektor, atau ketik di console: <code>wifi Kantor-WiFi rahasia123</code>.</li>
+          <li>Klien hanya tersambung jika SSID dan password cocok; setelah itu IP didapat dari DHCP jaringan di belakang AP.</li>
+        </ol>
+        <h3>Rantai FTTH (GPON)</h3>
+        <p>Susunan umum: <b>OLT</b> → <b>ODP/splitter</b> (1:2 sampai 1:16) → <b>ONT</b> di rumah pelanggan → router rumah. OLT memakai CLI switch dengan port GPON; ODP dan ONT bersifat pasif. Template <i>Rumah FTTH + WiFi</i> memberi contoh lengkap — buka PC-Kerja lalu jalankan <code>run cek-internet</code>.</p>
+        <p>Kalkulator <b>power budget fiber</b> serta <b>link budget wireless + zona Fresnel</b> tersedia di panel Panduan.</p>
+      </section>
+
+      <!-- ===================================================== SIMULASI -->
+      <section class="doc" id="simulasi">
+        <h2>Mode simulasi &amp; PDU</h2>
+        <p>Seperti Packet Tracer, editor punya dua mode: <b>Realtime</b> (<kbd>Shift</kbd>+<kbd>R</kbd>) dan <b>Simulasi</b> (<kbd>Shift</kbd>+<kbd>S</kbd>).</p>
+        <ul>
+          <li><b>PDU sederhana</b> (<kbd>P</kbd>): klik perangkat sumber lalu tujuan untuk mengirim ICMP.</li>
+          <li><b>PDU kompleks</b>: pilih protokol ICMP/TCP/UDP dan port tujuan.</li>
+          <li><b>Event list</b> menampilkan perjalanan paket langkah demi langkah dengan animasi amplop; klik event untuk melihat info per layer OSI.</li>
+          <li>Filter protokol, putar/jeda (<kbd>Spasi</kbd>), dan simpan beberapa skenario PDU.</li>
+        </ul>
+        <p>Alat <b>Inspect</b> (<kbd>I</kbd>) menampilkan tabel routing, ARP, MAC, VLAN, dan ACL dari perangkat yang diklik.</p>
+      </section>
+
+      <!-- ===================================================== WORKBOOK -->
+      <section class="doc" id="workbook">
+        <h2>Workbook &amp; penilaian</h2>
+        <p>Setiap lab dapat memiliki <b>workbook</b>: instruksi tugas (markdown) dan daftar pemeriksaan otomatis. Tekan <b>Cek</b> untuk mendapat skor 0–100.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Jenis cek</th><th>Lolos bila</th></tr></thead>
+          <tbody>
+            <tr><td>Ping</td><td>Node sumber berhasil ping ke node/IP tujuan</td></tr>
+            <tr><td>Config</td><td>Running-config node mengandung teks tertentu</td></tr>
+            <tr><td>Running</td><td>Node dalam keadaan menyala</td></tr>
+            <tr><td>Link</td><td>Ada kabel antara dua node</td></tr>
+          </tbody>
+        </table></div>
+        <h3>Fitur pendukung</h3>
+        <ul>
+          <li><b>Timer lab</b> untuk latihan atau ujian berbatas waktu (maks. 24 jam).</li>
+          <li><b>Config set</b> (maks. 12 per lab): simpan dan muat startup-config semua node, misalnya "awal" dan "kunci jawaban".</li>
+          <li><b>Ekspor semua config</b> ke satu file <code>.txt</code>, dan impor perintah ke node.</li>
+          <li>Admin dapat melihat <b>lab yang sedang berjalan</b> dari semua pengguna, lalu bergabung atau menghentikannya.</li>
+        </ul>
+      </section>
+
+      <!-- ===================================================== PETA 3D -->
+      <section class="doc" id="peta3d">
+        <h2>Peta 3D &amp; material</h2>
+        <p>Tab <b>Peta 3D</b> di editor untuk merencanakan instalasi lapangan.</p>
+        <ul>
+          <li>Bangunan bertingkat (rumah 1–2 lantai, kantor, gedung) dengan tangga, riser kabel, dan filter per lantai.</li>
+          <li>Perangkat dalam ruangan (rack, router, switch, patch panel, AP plafon, ONT, PC, CCTV, outlet) dan luar ruangan (OLT, ODC, tiang, tower, ODP, joint closure, handhole), antena dish/sektor/omni.</li>
+          <li><b>Tarik kabel otomatis</b>: naik ke cable tray, mengikuti sumbu bangunan, pindah lantai lewat riser; fiber udara melewati tiang dengan lendutan, atau tanam dalam pipa.</li>
+          <li>Jenis kabel: UTP Cat6, fiber SM, drop cable, coaxial, listrik, link wireless.</li>
+        </ul>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tab</th><th>Isi</th></tr></thead>
+          <tbody>
+            <tr><td>Kabel</td><td>Tabel kabel dan label; unduh CSV</td></tr>
+            <tr><td>Material</td><td>BOM: perangkat, meter kabel + slack, RJ45, konektor SC, tray, klem; unduh CSV</td></tr>
+            <tr><td>Budget</td><td>Daya terima tiap ONT dari OLT; RSSI, LOS, dan Fresnel tiap link PtP</td></tr>
+            <tr><td>Standar</td><td>Aturan pemasangan yang disarankan</td></tr>
+          </tbody>
+        </table></div>
+        <p>Objek 3D dapat dihubungkan ke node topologi — klik ganda membuka console node tersebut.</p>
+      </section>
+
+      <!-- ===================================================== CLAUDE -->
+      <section class="doc" id="claude">
+        <h2>Integrasi Claude AI</h2>
+        <p>NexLab dapat membangun lab dari permintaan teks memakai <b>Claude Code CLI</b> yang terpasang di komputer server. NexLab tidak menyimpan API key; pemakaian dihitung ke akun yang login di CLI tersebut.</p>
+        <ul>
+          <li><b>Buat dengan Claude</b> (halaman Main) atau menu <b>Claude AI</b> di editor: tulis permintaan seperti "3 VLAN dengan router-on-a-stick, DHCP dan ACL". Claude membuat perangkat, kabel, konfigurasi, IP, layanan server, dan workbook.</li>
+          <li>Mode <b>Ubah / tambah ke lab ini</b> atau <b>Ganti seluruh lab</b>.</li>
+          <li><b>Tanya Claude</b>: tanya jawab tentang lab yang terbuka, misalnya "kenapa ping PC1 ke PC3 gagal?".</li>
+        </ul>
+        <p>Status CLI, versi, dan akun tampil di <b>Status sistem</b>; admin dapat memulai login CLI dari sana. Secara default fitur ini hanya untuk admin — admin bisa mengizinkan pengguna lain.</p>
+      </section>
+
+      <!-- ===================================================== REAL -->
+      <section class="doc" id="real">
+        <h2>Perangkat real &amp; QEMU</h2>
+        <h3>Menyiapkan image QEMU</h3>
+        <p>Salin image milik Anda ke folder <code>images/qemu</code> di dalam <a href="#data">folder data</a>. Bisa satu folder per image, atau file langsung:</p>
+        <pre><code>images/qemu/vios/vios.qcow2
+images/qemu/mikrotik-7.15/chr.img
+images/qemu/linux-alpine/alpine.iso
+images/qemu/vyos.qcow2</code></pre>
+        <p>Tambahkan node <b>QEMU VM</b>, pilih image, atur RAM/CPU/jumlah NIC, lalu Start. Setiap node memakai disk overlay sendiri sehingga image asli tidak berubah; tombol <b>Wipe</b> menghapus overlay.</p>
+        <div class="callout warn"><p>Image vendor (misalnya Cisco) tidak disertakan karena berlisensi. Gunakan image yang Anda miliki secara sah.</p></div>
+        <h3>Linux Host &amp; bridge (khusus Linux, root)</h3>
+        <p>Node <b>Linux Host</b> dan bridge Layer 2 memerlukan hak root. Jalankan NexLab hasil instalasi dengan:</p>
+        <pre><code>sudo ~/.local/opt/nexlab/NexLab --open --data ~/.local/share/nexlab</code></pre>
+        <p>Setiap kabel antar node real dibuat sebagai Linux bridge (STP/CDP/LLDP diteruskan).</p>
+        <h3>Node Cloud ke jaringan fisik</h3>
+        <p>Paling aman memakai NIC kedua (USB LAN pun bisa) yang dicolok ke switch/router fisik. Di editor, tambahkan node <b>Cloud</b>, pilih NIC tersebut, lalu kabelkan node QEMU VM atau Linux Host ke Cloud.</p>
+        <p>Jika hanya punya satu NIC, jadikan NIC itu bridge. Lakukan dari console lokal (bukan SSH), karena koneksi sempat terputus:</p>
+        <pre><code>sudo ip link add pnet0 type bridge
+sudo ip link set eth0 master pnet0
+sudo ip link set pnet0 up
+sudo dhclient pnet0</code></pre>
+        <p>Ganti <code>eth0</code> dengan nama NIC Anda (<code>ip link</code>). Lalu pilih <code>pnet0</code> sebagai target node Cloud.</p>
+        <div class="callout"><p>Di Windows dan macOS, Cloud memakai NAT QEMU: VM bisa mengakses internet keluar, tetapi bukan bridge Layer 2 dan tidak meneruskan broadcast CDP/LLDP.</p></div>
+      </section>
+
+      <!-- ===================================================== FISIK -->
+      <section class="doc" id="fisik">
+        <h2>Mengelola perangkat fisik</h2>
+        <p>Node <b>Perangkat Fisik</b> membuka console Telnet/SSH dari browser ke switch/router sungguhan, melalui komputer NexLab.</p>
+        <ol class="steps">
+          <li>Pastikan komputer NexLab dapat menjangkau IP manajemen perangkat dan SSH/Telnet aktif di perangkat.</li>
+          <li>Tambahkan node <b>Perangkat Fisik</b>, isi IP manajemen, pilih SSH atau Telnet, dan port bila tidak standar.</li>
+          <li>Tekan <b>Uji ping dari server</b>. Banyak perangkat memblokir ICMP, jadi ping gagal belum tentu SSH tidak bisa.</li>
+          <li>Buka <b>Console</b> dan masukkan kredensial perangkat.</li>
+        </ol>
+        <p>Untuk kabel console serial, gunakan terminal server dan isi IP/port terminal server sebagai tujuan Telnet.</p>
+        <div class="callout"><p>PC/router simulasi tidak mengirim paket ke jaringan fisik. Ping dari PC simulasi ke IP Windows atau gateway rumah tidak akan lewat Wi-Fi komputer. Untuk menguji koneksi nyata, gunakan <b>Status sistem → Uji ping jaringan</b> atau tombol uji ping di node Perangkat Fisik.</p></div>
+      </section>
+
+      <!-- ===================================================== SISTEM -->
+      <section class="doc" id="sistem">
+        <h2>Status sistem &amp; update</h2>
+        <p>Halaman <b>Status sistem</b> menampilkan OS, versi NexLab, uptime, CPU, RAM, jumlah node menyala, alamat akses, kemampuan real (QEMU, KVM, root), serta status Claude CLI.</p>
+        <ul>
+          <li><b>Jaringan Windows</b>: daftar NIC, IPv4/gateway, dan neighbor dari cache ARP. IP neighbor dapat dipilih untuk node Perangkat Fisik. NexLab tidak memindai subnet.</li>
+          <li><b>Uji ping jaringan</b>: ping satu IP LAN atau publik (misalnya <code>8.8.8.8</code>) dari komputer server.</li>
+        </ul>
+        <figure>
+          <img src="screenshots/app-system-update.png" alt="Halaman Status sistem NexLab dengan pemeriksaan update" width="821" height="581" loading="lazy">
+          <figcaption>Status sistem: informasi host, alamat akses, dan pemeriksaan update.</figcaption>
+        </figure>
+        <h3>Memperbarui aplikasi</h3>
+        <ol>
+          <li>Klik <b>Scan for updates</b> untuk membandingkan versi Anda dengan rilis stabil terbaru.</li>
+          <li><b>Windows:</b> admin dapat memilih <b>Pasang update sekarang</b>. NexLab mengunduh paket, memverifikasi SHA-256, menutup diri, memperbarui, lalu membuka kembali.</li>
+          <li><b>macOS/Linux:</b> unduh installer terbaru dari <a href="index.html#download">halaman download</a> lalu jalankan seperti saat instalasi.</li>
+        </ol>
+        <p>Database, akun, lab, dan image selalu dipertahankan. Jika update Windows gagal, log ada di <code>%LOCALAPPDATA%\NexLab\logs\update.log</code>.</p>
+      </section>
+
+      <!-- ===================================================== PENGGUNA -->
+      <section class="doc" id="pengguna">
+        <h2>Manajemen pengguna</h2>
+        <p>Menu <b>Manajemen user</b> (khusus admin):</p>
+        <ul>
+          <li>Ubah peran admin/user, nonaktifkan akun, reset password, atau hapus akun.</li>
+          <li>Tutup <b>pendaftaran</b> setelah semua akun dibuat — sangat disarankan bila NexLab bisa diakses dari internet.</li>
+          <li>Ubah judul aplikasi dan izinkan/larang pengguna non-admin memakai Claude.</li>
+        </ul>
+        <p>Keamanan: password di-hash PBKDF2, sesi cookie HttpOnly, pembatasan percobaan login (8 kali gagal → jeda 5 menit), dan proteksi CSRF. Ganti password sendiri dari menu akun di pojok kanan atas.</p>
+      </section>
+
+      <!-- ===================================================== JARINGAN -->
+      <section class="doc" id="jaringan">
+        <h2>Akses dari jaringan &amp; internet</h2>
+        <h3>Dari perangkat lain di LAN</h3>
+        <p>Buka alamat yang tampil di Status sistem, misalnya <code>http://192.168.1.20:8080/</code>. Jika tidak bisa:</p>
+        <ul>
+          <li><b>Windows:</b> izinkan NexLab di Windows Defender Firewall (<b>Allow an app through firewall</b>) untuk jaringan Private.</li>
+          <li><b>Linux:</b> <code>sudo ufw allow 8080/tcp</code></li>
+          <li><b>macOS:</b> izinkan koneksi masuk saat diminta, atau di <b>System Settings → Network → Firewall</b>.</li>
+        </ul>
+        <h3>Dari internet</h3>
+        <ol>
+          <li>Port forwarding di router: TCP 8080 → IP lokal komputer NexLab.</li>
+          <li>Sangat disarankan memakai HTTPS: jalankan dengan <code>--cert</code> dan <code>--key</code>, atau taruh di belakang reverse proxy.</li>
+          <li>Tutup pendaftaran setelah akun Anda dibuat.</li>
+        </ol>
+        <p>Contoh Caddy (HTTPS otomatis; WebSocket console di path <code>/ws/</code> ikut diteruskan):</p>
+        <pre><code>lab.domainanda.com {
+    reverse_proxy 127.0.0.1:8080
+}</code></pre>
+      </section>
+
+      <!-- ===================================================== DATA -->
+      <section class="doc" id="data">
+        <h2>Data &amp; cadangan</h2>
+        <p>Database akun dan lab, image QEMU, serta file runtime disimpan terpisah dari aplikasi sehingga tidak terhapus saat update:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>OS</th><th>Folder data</th></tr></thead>
+          <tbody>
+            <tr><td>Windows</td><td><code>%LOCALAPPDATA%\NexLab\data</code></td></tr>
+            <tr><td>macOS</td><td><code>~/Library/Application Support/NexLab/data</code></td></tr>
+            <tr><td>Linux</td><td><code>~/.local/share/nexlab</code> (atau <code>$XDG_DATA_HOME/nexlab</code>)</td></tr>
+          </tbody>
+        </table></div>
+        <p>Isi penting: <code>nexlab.db</code> (akun &amp; lab), <code>images/</code> (image QEMU), <code>runtime/</code> (disk overlay, dapat dihapus).</p>
+        <p><b>Cadangan:</b> tutup NexLab lalu salin <code>nexlab.db</code>. Untuk satu lab, cukup <b>Ekspor</b> ke <code>.nexlab.json</code>.</p>
+      </section>
+
+      <!-- ===================================================== MASALAH -->
+      <section class="doc" id="masalah">
+        <h2>Pemecahan masalah</h2>
+        <details>
+          <summary>Installer gagal: "checksum tidak cocok" atau unduhan terputus</summary>
+          <p>Koneksi internet terputus atau paket rusak saat diunduh. Jalankan ulang installer. Jika memakai proxy kantor, coba jaringan lain. Installer sengaja berhenti bila checksum tidak cocok demi keamanan.</p>
+        </details>
+        <details>
+          <summary>Windows: shortcut tidak membuka apa-apa / jendela langsung tertutup</summary>
+          <p>Biasanya port 8080 sudah dipakai aplikasi lain. Jalankan <code>NexLab.exe --port 8090 --open</code> dari folder instalasi, atau tutup aplikasi yang memakai port 8080. Antivirus kadang juga memblokir aplikasi yang belum ditandatangani — tambahkan pengecualian untuk folder NexLab.</p>
+        </details>
+        <details>
+          <summary>macOS: "NexLab.app can't be opened because it is from an unidentified developer"</summary>
+          <p>Klik kanan <code>NexLab.app</code> → <b>Open</b> → <b>Open</b>, atau buka <b>System Settings → Privacy &amp; Security</b> lalu klik <b>Open Anyway</b>.</p>
+        </details>
+        <details>
+          <summary>Browser menampilkan halaman tidak ditemukan / tidak bisa terhubung</summary>
+          <p>Pastikan jendela server NexLab masih berjalan. Gunakan alamat <code>http://</code> (bukan <code>https://</code>) kecuali HTTPS sudah diaktifkan. Dari perangkat lain, periksa firewall (lihat <a href="#jaringan">Akses dari jaringan</a>).</p>
+        </details>
+        <details>
+          <summary>Ping antar PC gagal</summary>
+          <ul>
+            <li>Pastikan semua node dalam jalur sudah menyala dan lampu link hijau.</li>
+            <li>Ping pertama sering hilang karena ARP — ulangi sekali lagi.</li>
+            <li>Periksa IP, mask, dan gateway PC (<code>ipconfig</code>); interface router harus <code>no shutdown</code>.</li>
+            <li>Periksa VLAN akses dan trunk (<code>show vlan brief</code>, <code>show interfaces trunk</code>).</li>
+            <li>Routing harus ada di kedua arah (<code>show ip route</code> di tiap router), dan tidak ada ACL yang memblokir.</li>
+            <li>Gunakan mode Simulasi untuk melihat di hop mana paket berhenti, atau tanyakan ke Claude.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>PC tidak mendapat IP dari DHCP</summary>
+          <p>Periksa pool DHCP di router/server (<code>show ip dhcp binding</code>), alamat yang di-<code>excluded</code>, dan bahwa PC berada di VLAN yang sama dengan gateway pool. Jika server DHCP di subnet lain, tambahkan <code>ip helper-address</code>. Setelah memperbaiki, jalankan <code>ipconfig /renew</code>.</p>
+        </details>
+        <details>
+          <summary>Konfigurasi hilang setelah node dimatikan</summary>
+          <p>Simpan dengan <code>write memory</code> atau <code>copy running-config startup-config</code> sebelum mematikan node. Gunakan <b>Config set</b> untuk menyimpan beberapa versi konfigurasi.</p>
+        </details>
+        <details>
+          <summary>Console menampilkan "Device is powered off"</summary>
+          <p>Node belum dinyalakan. Klik <b>Start</b> di panel inspektor, lalu tekan Enter di console.</p>
+        </details>
+        <details>
+          <summary>QEMU VM gagal start</summary>
+          <ul>
+            <li>Pastikan QEMU terpasang dan status <b>QEMU siap</b> di Status sistem.</li>
+            <li>Pastikan image ada di <code>images/qemu</code> dalam folder data dan dipilih di node.</li>
+            <li>Kurangi RAM node bila memori host tidak cukup. Tanpa KVM, VM berjalan lambat.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>VM tidak bisa menjangkau jaringan fisik</summary>
+          <p>Bridge Layer 2 hanya tersedia di Linux dengan root. Periksa nama NIC/bridge yang dipilih di node Cloud, dan pastikan firewall host tidak memblokir. Di Windows/macOS, Cloud memakai NAT sehingga perangkat fisik tidak dapat memulai koneksi ke VM.</p>
+        </details>
+        <details>
+          <summary>Fitur Claude tidak tersedia</summary>
+          <p>Pastikan Claude Code CLI terpasang di komputer server dan sudah login (cek di Status sistem). Pengguna non-admin hanya bisa memakai fitur ini bila admin mengizinkannya.</p>
+        </details>
+        <details>
+          <summary>Lupa password</summary>
+          <p>Minta admin melakukan reset password di Manajemen user. Jika admin satu-satunya yang lupa, admin lain harus mereset; tanpa admin lain, akun tidak dapat dipulihkan dari aplikasi.</p>
+        </details>
+      </section>
+
+      <!-- ===================================================== FAQ -->
+      <section class="doc" id="faq">
+        <h2>FAQ</h2>
+        <details>
+          <summary>Apakah NexLab gratis?</summary>
+          <p>Ya. Dukungan lewat donasi bersifat sukarela.</p>
+        </details>
+        <details>
+          <summary>Apakah butuh internet?</summary>
+          <p>Hanya untuk instalasi, pemeriksaan update, dan fitur Claude. Lab simulasi berjalan sepenuhnya offline.</p>
+        </details>
+        <details>
+          <summary>Apakah CLI-nya IOS asli?</summary>
+          <p>Bukan. Node simulasi adalah emulasi perintah yang umum dipakai untuk belajar. Untuk IOS asli, gunakan node QEMU dengan image vIOS/CSR1000v milik Anda.</p>
+        </details>
+        <details>
+          <summary>Berapa node yang bisa dijalankan?</summary>
+          <p>Node simulasi sangat ringan — puluhan hingga ratusan node tetap lancar di laptop biasa. Batas sebenarnya ditentukan node QEMU yang memakai RAM sesuai pengaturannya.</p>
+        </details>
+        <details>
+          <summary>Bisakah beberapa orang memakai satu server?</summary>
+          <p>Bisa. Setiap pengguna punya lab sendiri; admin dapat melihat dan menghentikan lab yang berjalan. Cocok untuk kelas atau tim.</p>
+        </details>
+        <details>
+          <summary>Bisakah file lab dipakai di Packet Tracer?</summary>
+          <p>Tidak. Format NexLab adalah <code>.nexlab.json</code>. Konfigurasi perangkat dapat diekspor ke <code>.txt</code> dan ditempel ke perangkat lain.</p>
+        </details>
+      </section>
+
+      <!-- ===================================================== DUKUNGAN -->
+      <section class="doc" id="dukungan">
+        <h2>Donasi &amp; masukan</h2>
+        <p>Menemukan bug atau punya ide fitur? Kirim lewat tombol <a href="index.html#feedback">Feedback</a> di website — aplikasi email Anda terbuka dengan pesan yang sudah terisi dan langsung terkirim ke admin.</p>
+        <p>Ingin membantu pengembangan? Gunakan tombol <a href="index.html#donasi">Donasi</a> (Saweria atau PayPal). Terima kasih!</p>
+        <p>Punya rancangan lab yang bagus? Bagikan di <a href="index.html#marketplace">Marketplace</a> sebagai file <code>.nexlab.json</code>.</p>
+      </section>
+
+      <p><a class="btn" href="index.html">← Kembali ke beranda</a></p>
+    </main>
+  </div>
 
   <footer class="doc-footer">
     © <span id="year"></span> NexLab. Software dibuat oleh Adi Susilo / Creator.
   </footer>
 
   <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-    const sections = document.querySelectorAll("section[id], h2[id]");
-    const nav = document.getElementById("doc-nav");
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const link = nav.querySelector(`a[href="#${entry.target.id}"]`);
-        if (link) link.classList.toggle("active", entry.isIntersecting && entry.intersectionRatio >= 0.5);
+    (() => {
+      document.getElementById("year").textContent = new Date().getFullYear();
+      const toc = document.getElementById("toc");
+      const toggle = document.getElementById("toc-toggle");
+      const links = [...toc.querySelectorAll("a[href^='#']")];
+      const sections = links.map(link => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+
+      toggle.addEventListener("click", () => {
+        const open = !toc.classList.contains("open");
+        toc.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", String(open));
       });
-    }, { threshold: [0.3, 0.6, 0.9] });
-    sections.forEach(s => observer.observe(s));
+      links.forEach(link => link.addEventListener("click", () => {
+        toc.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+      }));
+
+      const visible = new Map();
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => visible.set(entry.target.id, entry.isIntersecting));
+        const current = sections.find(section => visible.get(section.id));
+        if (current) links.forEach(link => link.classList.toggle("active", link.getAttribute("href") === `#${current.id}`));
+      }, { rootMargin: "-70px 0px -60% 0px" });
+      sections.forEach(section => observer.observe(section));
+
+      // Filter the table of contents by section title and body text.
+      const search = document.getElementById("toc-search");
+      const noResult = document.getElementById("no-result");
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLocaleLowerCase("id");
+        let shown = 0;
+        links.forEach(link => {
+          const section = document.querySelector(link.getAttribute("href"));
+          const match = !query || (section && section.textContent.toLocaleLowerCase("id").includes(query));
+          link.parentElement.classList.toggle("hidden-by-search", !match);
+          if (match) shown += 1;
+        });
+        noResult.style.display = shown ? "none" : "block";
+      });
+
+      // Copy buttons on code blocks.
+      document.querySelectorAll("pre").forEach(pre => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy";
+        button.textContent = "Salin";
+        button.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(pre.querySelector("code").textContent);
+            button.textContent = "Tersalin";
+          } catch (error) {
+            button.textContent = "Gagal";
+          }
+          setTimeout(() => { button.textContent = "Salin"; }, 1500);
+        });
+        pre.append(button);
+      });
+    })();
   </script>
 </body>
 </html>

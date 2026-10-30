@@ -15,16 +15,16 @@
   .admin-login input { width:100%; padding:10px 12px; background:#0b0e17; border:1px solid #3a3f5c; border-radius:6px; color:#e9ebf5; font-size:14px; margin-bottom:14px; }
   .admin-login-error { color:#ff6b6b; font-size:13px; min-height:18px; }
   </style>
-  <script src="support-crypto.js" defer></script>
+  <script src="config.js"></script>
   <script src="i18n.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
   <body class="admin-page">
-  <div id="admin-lock" class="admin-lock hidden">
+  <div id="admin-lock" class="admin-lock">
     <div class="admin-login">
       <h2>Administrator Login</h2>
       <p>Masukkan sandi untuk mengakses dasbor.</p>
-      <input type="password" id="admin-password" autocomplete="current-password" placeholder="Sandi" maxlength="64">
+      <input type="password" id="admin-password" autocomplete="current-password" placeholder="Sandi" maxlength="64" aria-label="Sandi">
       <button class="button button-primary" id="admin-login-btn" type="button">Masuk</button>
       <div class="admin-login-error" id="admin-login-error" role="alert"></div>
     </div>
@@ -76,45 +76,13 @@
       </section>
       <section class="admin-panel" data-panel-content="feedback">
         <section class="admin-card">
-          <div class="admin-card-heading"><div><h2>Encryption key setup</h2><p>Create an encryption key pair once. The private key is password-protected and must never be published.</p></div></div>
+          <div class="admin-card-heading"><div><h2>Feedback by email</h2><p>Visitors send feedback from the website form. Their email app opens with the message filled in and sends it straight to the admin inbox.</p></div></div>
           <div class="admin-card-body">
-            <label class="form-field">New private-key password<input id="new-key-password" type="password" minlength="12" autocomplete="new-password" placeholder="Use at least 12 characters"></label>
-            <label class="form-field">Confirm private-key password<input id="new-key-password-confirm" type="password" minlength="12" autocomplete="new-password"></label>
-            <button class="button button-outline" id="generate-feedback-keys" type="button">Generate keys</button>
-            <p class="admin-inline-status" id="key-status" role="status"></p>
-            <div class="hidden" id="generated-key-output">
-              <p>Copy this public key into <code>feedbackPublicKey</code> in <code>WebSite/config.js</code>. Keep the downloaded private-key file offline and backed up.</p>
-              <textarea id="public-key-output" class="admin-key-output" rows="5" readonly aria-label="Public encryption key"></textarea>
-              <button class="button button-outline" id="download-public-key" type="button">Download public key</button>
-            </div>
+            <p>Admin inbox: <b id="feedback-email">—</b></p>
+            <a class="button button-outline" id="feedback-email-link" href="#">Open email inbox ↗</a>
+            <p class="admin-inline-status">To change the destination address, edit <code>feedbackEmail</code> in <code>WebSite/config.js</code>. No keys or files need to be managed.</p>
           </div>
         </section>
-        <section class="admin-card">
-          <div class="admin-card-heading"><div><h2>Unlock feedback inbox</h2><p>Unlock the private key first, then import encrypted feedback files downloaded by visitors.</p></div></div>
-          <div class="admin-card-body">
-            <label class="form-field">Encrypted private-key file<input id="private-key-file" type="file" accept=".json,application/json"></label>
-            <label class="form-field">Private-key password<input id="private-key-password" type="password" autocomplete="current-password"></label>
-            <button class="button button-primary" id="unlock-feedback" type="button">Unlock inbox</button>
-            <p class="admin-inline-status" id="feedback-status" role="status"></p>
-          </div>
-        </section>
-        <div class="hidden" id="feedback-inbox">
-          <section class="admin-card">
-            <div class="admin-card-heading"><div><h2>Import encrypted feedback</h2><p>Choose one or more .json files created by the support form. Files are decrypted locally and are not uploaded.</p></div></div>
-            <div class="admin-card-body">
-              <label class="form-field">Encrypted feedback files<input id="feedback-files" type="file" accept=".json,application/json" multiple></label>
-              <button class="button button-outline" id="import-feedback" type="button">Import files</button>
-              <button class="button button-quiet" id="clear-feedback" type="button">Clear inbox</button>
-              <p class="admin-inline-status">The received time comes from the visitor's device and is not server-verified. Imported messages stay in memory until this page is closed or the inbox is cleared.</p>
-              <div class="admin-table-wrap">
-                <table class="admin-table">
-                  <thead><tr><th>Received (date and time)</th><th>Donation method (optional)</th><th>Contact</th><th>Message</th></tr></thead>
-                  <tbody id="feedback-rows"><tr><td colspan="4">No files imported.</td></tr></tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-        </div>
       </section>
       <footer class="admin-footer">NexLab · Software created by Adi Susilo / Creator · <a href="https://github.com/Mrx112/nexlab" target="_blank" rel="noopener noreferrer">GitHub repository ↗</a></footer>
     </main>

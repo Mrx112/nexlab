@@ -554,10 +554,16 @@
     donateDialog.showModal();
   });
   const feedbackDialog = document.querySelector("#feedback-dialog");
-  document.querySelector("#feedback-open").addEventListener("click", () => {
+  function openFeedback() {
     document.querySelector("#feedback-message").textContent = "";
-    feedbackDialog.showModal();
-  });
+    if (!feedbackDialog.open) feedbackDialog.showModal();
+  }
+  document.querySelector("#feedback-open").addEventListener("click", openFeedback);
+  document.querySelectorAll('a[href="#feedback"]').forEach(link => link.addEventListener("click", event => {
+    event.preventDefault();
+    openFeedback();
+  }));
+  if (window.location.hash === "#feedback") openFeedback();
   document.querySelector("#feedback-form").addEventListener("submit", async event => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -580,7 +586,7 @@
       const mailtoUrl = "mailto:" + encodeURIComponent(config.feedbackEmail) +
         "?subject=" + subject + "&body=" + body;
       window.location.href = mailtoUrl;
-      message.textContent = "Klien email Anda akan terbuka. Pastikan untuk mengirimkan.";
+      message.textContent = `Aplikasi email akan terbuka — tekan Kirim di sana. Jika tidak terbuka, kirim pesanmu langsung ke ${config.feedbackEmail}.`;
     } catch (error) {
       console.error("Masukan tidak dapat dikirim.", error);
       message.textContent = error.message;

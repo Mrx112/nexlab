@@ -34,7 +34,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.4'
+VERSION = '1.4.5'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -70,7 +70,12 @@ async def guard(req, handler):
             return jerr('Not logged in', 401)
         if path.startswith('/api/admin') and (not user or user['role'] != 'admin'):
             return jerr('Admin only', 403)
-    resp = await handler(req)
+    try:
+        resp = await handler(req)
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+        if not path.startswith('/api/'):
+            raise
+        return jerr(f'Permintaan tidak valid: {e}')
     resp.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
     return resp
@@ -781,7 +786,12 @@ async def lab_extra(req):
         rt.lab['workbook'] = ai.sanitize_workbook(d['workbook']) if d['workbook'] else None
     if 'timer' in d:
         t = d['timer'] if isinstance(d['timer'], dict) else {}
-        rt.lab['timer'] = {'minutes': max(0, min(1440, int(t.get('minutes') or 0))), 'started': float(t.get('started') or 0)} if t else None
+        try:
+            minutes = max(0, min(1440, int(float(t.get('minutes') or 0))))
+            started = max(0.0, float(t.get('started') or 0))
+        except (TypeError, ValueError):
+            return jerr('Nilai timer tidak valid')
+        rt.lab['timer'] = {'minutes': minutes, 'started': started} if t else None
     rt.mark_dirty()
     return web.json_response({'ok': True})
 
@@ -1068,7 +1078,10 @@ async def ws_console(req):
             async for msg in ws:
                 if msg.type != WSMsgType.TEXT:
                     continue
-                data = json.loads(msg.data)
+                try:
+                    data = json.loads(msg.data)
+                except ValueError:
+                    continue
                 if data.get('t') == 'data' and hub.write:
                     hub.write(data['d'])
                 elif data.get('t') == 'resize' and hub.resize:

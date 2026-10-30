@@ -1,44 +1,57 @@
 (() => {
-  const ADMIN_PASSWORD = "Mr_112211";
+  // SHA-256 of the dashboard password. This page only shows public release data,
+  // so the lock is a convenience gate, not server-side authentication.
+  const ADMIN_PASSWORD_SHA256 = "d0ccbeb7b45cc5930fedf0dcb2debddc1bf170ed4b6ce6873c5fdb4775256fdf";
   const lock = document.querySelector("#admin-lock");
   const loginBtn = document.querySelector("#admin-login-btn");
   const loginError = document.querySelector("#admin-login-error");
+  const passwordInput = document.querySelector("#admin-password");
+  let dashboardStarted = false;
 
-  function checkAuth() {
-    const authed = sessionStorage.getItem("nexlab_admin_authed") === "1";
-    if (authed) {
-      lock.classList.add("hidden");
-      document.body.classList.add("admin-authed");
-      return true;
-    }
-    lock.classList.remove("hidden");
-    document.body.classList.remove("admin-authed");
-    return false;
+  async function sha256Hex(text) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
   }
 
-  loginBtn.addEventListener("click", () => {
-    const pw = document.querySelector("#admin-password").value;
-    if (pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem("nexlab_admin_authed", "1");
-      checkAuth();
+  function unlock() {
+    lock.classList.add("hidden");
+    document.body.classList.add("admin-authed");
+    if (!dashboardStarted) {
+      dashboardStarted = true;
+      startDashboard();
+    }
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    loginError.textContent = "";
+    if (!window.crypto?.subtle) {
+      loginError.textContent = "Browser tidak mendukung verifikasi sandi (butuh HTTPS).";
+      return;
+    }
+    if (await sha256Hex(passwordInput.value) === ADMIN_PASSWORD_SHA256) {
+      try { sessionStorage.setItem("nexlab_admin_authed", "1"); } catch (error) { /* storage blocked: stay unlocked for this page only */ }
+      passwordInput.value = "";
+      unlock();
     } else {
       loginError.textContent = "Sandi salah.";
-      document.querySelector("#admin-password").value = "";
-      document.querySelector("#admin-password").focus();
+      passwordInput.value = "";
+      passwordInput.focus();
     }
   });
 
-  document.querySelector("#admin-password").addEventListener("keypress", e => {
-    if (e.key === "Enter") loginBtn.click();
+  passwordInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") loginBtn.click();
   });
 
-  if (!checkAuth()) return;
+  let alreadyAuthed = false;
+  try { alreadyAuthed = sessionStorage.getItem("nexlab_admin_authed") === "1"; } catch (error) { /* storage blocked */ }
+  if (alreadyAuthed) unlock();
+  else passwordInput.focus();
 
+  function startDashboard() {
   const repository = "Mrx112/nexlab";
   const endpoint = `https://api.github.com/repos/${repository}/releases?per_page=100`;
   const status = document.querySelector("#admin-status");
-  let feedbackPrivateKey = null;
-  let feedbackRecords = [];
   const formatCount = value => new Intl.NumberFormat(
     document.documentElement.lang === "id" ? "id-ID" : "en-US"
   ).format(value);
@@ -65,46 +78,6 @@
     cell.textContent = value;
     row.append(cell);
     return cell;
-  };
-  const downloadJson = (name, value) => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  const formatDateTime = value => new Intl.DateTimeFormat(
-    document.documentElement.lang === "id" ? "id-ID" : "en-US",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZoneName: "short"
-    }
-  ).format(new Date(value));
-  const renderFeedback = () => {
-    const rows = document.querySelector("#feedback-rows");
-    rows.replaceChildren();
-    const ordered = [...feedbackRecords].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-    if (!ordered.length) {
-      const row = document.createElement("tr");
-      const cell = createCell(row, "No files imported.");
-      cell.colSpan = 4;
-      rows.append(row);
-      return;
-    }
-    ordered.forEach(record => {
-      const row = document.createElement("tr");
-      createCell(row, formatDateTime(record.createdAt));
-      createCell(row, record.method === "saweria" ? "Saweria" : record.method === "paypal" ? "PayPal" : "—");
-      createCell(row, record.contact || "—");
-      createCell(row, record.message);
-      rows.append(row);
-    });
   };
   const createAssetRow = (asset, releaseName, includeRelease) => {
     const row = document.createElement("tr");
@@ -211,149 +184,25 @@
         overview: "Public release activity and download totals.",
         downloads: "Download counts reported by GitHub for published assets.",
         releases: "Version tags and publication dates.",
-        feedback: "Unlock and import encrypted visitor messages."
+        feedback: "Where visitor feedback arrives."
       }[button.dataset.panel];
       document.querySelector("#refresh-metrics").classList.toggle("hidden", button.dataset.panel === "feedback");
     });
   });
   document.querySelector("#refresh-metrics").addEventListener("click", loadMetrics);
 
-  document.querySelector("#generate-feedback-keys").addEventListener("click", async event => {
-    const button = event.currentTarget;
-    const passwordInput = document.querySelector("#new-key-password");
-    const confirmationInput = document.querySelector("#new-key-password-confirm");
-    const keyStatus = document.querySelector("#key-status");
-    const password = passwordInput.value;
-    if (password.length < 12) {
-      keyStatus.textContent = "Use a password with at least 12 characters.";
-      passwordInput.focus();
-      return;
-    }
-    if (password !== confirmationInput.value) {
-      keyStatus.textContent = "The password entries do not match.";
-      confirmationInput.focus();
-      return;
-    }
-    button.disabled = true;
-    keyStatus.textContent = "Generating keys…";
-    try {
-      const keys = await window.NexLabSupportCrypto.generateAdminKeys(password);
-      const publicText = JSON.stringify(keys.publicJwk, null, 2);
-      document.querySelector("#public-key-output").value = publicText;
-      document.querySelector("#generated-key-output").classList.remove("hidden");
-      downloadJson("nexlab-feedback-private-key.json", keys.privateBundle);
-      keyStatus.textContent = "Keys generated. Store the private-key file securely and add the public key to the site configuration.";
-      passwordInput.value = "";
-      confirmationInput.value = "";
-    } catch (error) {
-      console.error("Feedback encryption keys could not be generated.", error);
-      keyStatus.textContent = `Key generation failed: ${error.message}`;
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  document.querySelector("#unlock-feedback").addEventListener("click", async event => {
-    const button = event.currentTarget;
-    const file = document.querySelector("#private-key-file").files[0];
-    const password = document.querySelector("#private-key-password").value;
-    const feedbackStatus = document.querySelector("#feedback-status");
-    if (!file || !password) {
-      feedbackStatus.textContent = "Choose the encrypted private-key file and enter its password.";
-      return;
-    }
-    if (file.size > 1024 * 1024) {
-      feedbackStatus.textContent = "The private-key file exceeds the 1 MB limit.";
-      return;
-    }
-    button.disabled = true;
-    feedbackStatus.textContent = "Unlocking private key…";
-    try {
-      const bundle = JSON.parse(await file.text());
-      feedbackPrivateKey = await window.NexLabSupportCrypto.unlockPrivateKey(bundle, password);
-      document.querySelector("#private-key-password").value = "";
-      document.querySelector("#feedback-inbox").classList.remove("hidden");
-      feedbackStatus.textContent = "Private key unlocked in this browser session.";
-      renderFeedback();
-    } catch (error) {
-      feedbackPrivateKey = null;
-      console.error("Feedback private key could not be unlocked.", error);
-      feedbackStatus.textContent = "Could not unlock the key. Check that the file is valid and the password is correct.";
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  document.querySelector("#import-feedback").addEventListener("click", async event => {
-    const button = event.currentTarget;
-    const filesInput = document.querySelector("#feedback-files");
-    const files = [...filesInput.files];
-    const feedbackStatus = document.querySelector("#feedback-status");
-    if (!feedbackPrivateKey) {
-      feedbackStatus.textContent = "Unlock the private key before importing feedback.";
-      return;
-    }
-    if (!files.length) {
-      feedbackStatus.textContent = "Choose one or more encrypted feedback files.";
-      return;
-    }
-    if (files.length > 100 || files.some(file => file.size > 2 * 1024 * 1024)) {
-      feedbackStatus.textContent = "Select at most 100 files, each smaller than 2 MB.";
-      return;
-    }
-    button.disabled = true;
-    feedbackStatus.textContent = "Decrypting feedback locally…";
-    try {
-      const imported = [];
-      for (const file of files) {
-        const bundle = JSON.parse(await file.text());
-        if (bundle.format !== window.NexLabSupportCrypto.feedbackFormat || bundle.version !== 1 ||
-          !Array.isArray(bundle.submissions) || !bundle.submissions.length || bundle.submissions.length > 100) {
-          throw new Error(`${file.name}: unsupported feedback file format.`);
-        }
-        for (const encrypted of bundle.submissions) {
-          const record = await window.NexLabSupportCrypto.decryptFeedback(encrypted, feedbackPrivateKey);
-          if (!record || (record.method && !["saweria", "paypal", null].includes(record.method)) ||
-            typeof record.message !== "string" || !record.message.trim() || record.message.length > 3000 ||
-            typeof record.contact !== "string" || record.contact.length > 160 ||
-            !Number.isFinite(Date.parse(record.createdAt))) {
-            throw new Error(`${file.name}: invalid decrypted feedback data.`);
-          }
-          imported.push({ ...record, id: String(encrypted.id || crypto.randomUUID()) });
-        }
-      }
-      const knownIds = new Set(feedbackRecords.map(record => record.id));
-      const unique = imported.filter(record => {
-        if (knownIds.has(record.id)) return false;
-        knownIds.add(record.id);
-        return true;
-      });
-      feedbackRecords = [...feedbackRecords, ...unique];
-      renderFeedback();
-      feedbackStatus.textContent = `${unique.length} new message(s) imported. Data remains in memory only.`;
-      filesInput.value = "";
-    } catch (error) {
-      console.error("Encrypted feedback could not be imported.", error);
-      feedbackStatus.textContent = `Import failed: ${error.message}`;
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  document.querySelector("#clear-feedback").addEventListener("click", () => {
-    feedbackRecords = [];
-    renderFeedback();
-    document.querySelector("#feedback-status").textContent = "Inbox cleared from this browser session.";
-  });
-
-  document.querySelector("#download-public-key").addEventListener("click", () => {
-    try {
-      const publicKey = JSON.parse(document.querySelector("#public-key-output").value);
-      downloadJson("nexlab-feedback-public-key.json", publicKey);
-    } catch (error) {
-      console.error("Public key export failed.", error);
-      document.querySelector("#key-status").textContent = `Public-key export failed: ${error.message}`;
-    }
-  });
+  const feedbackEmail = window.NEXLAB_SITE_CONFIG?.feedbackEmail || "";
+  document.querySelector("#feedback-email").textContent = feedbackEmail || "Not configured";
+  const inboxLink = document.querySelector("#feedback-email-link");
+  if (/@gmail\.com$/i.test(feedbackEmail)) {
+    inboxLink.href = `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(feedbackEmail)}`;
+    inboxLink.target = "_blank";
+    inboxLink.rel = "noopener noreferrer";
+  } else if (feedbackEmail) {
+    inboxLink.href = `mailto:${feedbackEmail}`;
+  } else {
+    inboxLink.classList.add("hidden");
+  }
   loadMetrics();
+  }
 })();

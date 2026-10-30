@@ -127,7 +127,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi berikutnya adalah `1.4.1`, termasuk splash screen animasi, suara, dan efek elektronik. Setelah rilis `v1.4.1` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman rilis.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.5`. Setelah rilis `v1.4.5` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
 
 ### Instalasi dari source (developer/server)
 
@@ -194,17 +194,17 @@ data/               database SQLite, image, runtime (dibuat otomatis)
 
 ## Website NexLab
 
-Website promosi dan marketplace komunitas tersedia di folder `WebSite/`. Buka `WebSite/index.html` untuk beranda, `WebSite/document.html` untuk panduan lengkap, atau `WebSite/admin.html` untuk dashboard admin. Sajikan folder tersebut dengan web server statis. Urutan 240 gambar di `WebSite/bg/` ditampilkan sebagai latar sinematik yang mengikuti scroll; versi WebP terkompresi disimpan di `WebSite/bg/optimized/` agar lebih ringan. File PNG asli diabaikan Git melalui `.gitignore`.
+Website promosi dan marketplace komunitas tersedia di folder `WebSite/`. Buka `WebSite/index.html` untuk beranda, `WebSite/document.html` untuk dokumentasi pengguna lengkap (instalasi lewat file unduhan, editor, CLI, tutorial, perangkat real, administrasi, pemecahan masalah, FAQ), atau `WebSite/admin.html` untuk dashboard admin. Sajikan folder tersebut dengan web server statis. Urutan 240 gambar di `WebSite/bg/` ditampilkan sebagai latar sinematik yang mengikuti scroll; versi WebP terkompresi disimpan di `WebSite/bg/optimized/` agar lebih ringan. File PNG asli diabaikan Git melalui `.gitignore`.
 
 Katalog bawaan ditandai sebagai contoh. Kreator dapat menyimpan listing beserta file lab NexLab di penyimpanan browser, mengunduh file tersebut, atau mengekspor dan membagikan paket listing untuk diimpor di browser lain. Ini adalah alur berbagi statis, bukan marketplace server: pembayaran perlu dihubungkan pada `WebSite/config.js` sebelum menjual file berbayar. Tombol unduhan per OS sudah diarahkan ke installer pada GitHub Release terbaru; setelah rilis pertama tersedia, installer mengambil paket aplikasi, memeriksa SHA-256, memasang NexLab, dan membuat shortcut. Konfigurasi `saweriaUrl` dan `paypalUrl` mengatur tautan donasi, sedangkan `checkoutUrl` digunakan untuk checkout marketplace.
 
 Website dibuat oleh Adi Susilo / Creator.
 
-### Masukan terenkripsi dan dashboard admin
+### Donasi, masukan, dan dashboard admin
 
-Form dukungan di **Donasi** (tombol di navigasi) membuka tautan pembayaran langsung (Saweria/PayPal) sesuai `saweriaUrl` dan `paypalUrl` pada `WebSite/config.js`. Form **Feedback** (terpisah) mengenkripsi pesan di browser dengan kunci publik dan mengunduh satu file JSON per masukan. Di `WebSite/admin.html`, admin membuat pasangan kunci, menetapkan kata sandi minimal 12 karakter, lalu memasukkan nilai kunci publik ke `feedbackPublicKey` pada `WebSite/config.js`. Simpan file kunci pribadi terenkripsi secara offline dan buat cadangan. Jangan commit file kunci pribadi; `.gitignore` mengecualikan berkas hasil unduhan bernama `nexlab-feedback-private-key*.json`.
+Tombol **Donasi** membuka tautan pembayaran langsung (Saweria/PayPal) sesuai `saweriaUrl` dan `paypalUrl` pada `WebSite/config.js`. Form **Feedback** (tautan navigasi atau tombol *Kirim masukan*) membuka aplikasi email pengunjung dengan pesan yang sudah terisi dan dikirim ke alamat `feedbackEmail` di `WebSite/config.js`; tidak ada kunci enkripsi yang perlu dikelola.
 
-Untuk membaca masukan, admin membuka dashboard, mengunggah file kunci pribadi dan memasukkan kata sandinya, lalu mengimpor satu atau beberapa file masukan. Dashboard menampilkan waktu, metode donasi (jika ada), kontak, dan pesan dalam tabel. Data hanya didekripsi di browser dan tetap di memori sampai halaman ditutup atau kotak masuk dikosongkan; tanggal berasal dari perangkat pengirim, bukan waktu server terverifikasi. File JSON masukan berisi ciphertext, sedangkan metadata pesan dilindungi enkripsi AES-GCM dengan kunci yang dibungkus RSA-OAEP. Mode ini bukan database tersinkronisasi dan tidak menyediakan autentikasi server-side.
+`WebSite/admin.html` menampilkan statistik unduhan rilis publik dan alamat kotak masuk feedback. Halaman ini dikunci dengan sandi yang diverifikasi di browser (hanya hash SHA-256 yang disimpan di source); karena datanya publik, kunci ini adalah penyaring kenyamanan, bukan autentikasi server.
 
 ## Tangkapan layar dan showcase
 
@@ -217,8 +217,6 @@ Berikut tampilan NexLab saat digunakan: editor topologi demo, pemantauan sistem 
 ![Website NexLab](screenshots/website-home.png)
 
 ![Dashboard statistik publik](screenshots/website-admin.png)
-
-![Animasi showcase NexLab](screenshots/nexlab-showcase.gif)
 
 ## Lab demo
 
