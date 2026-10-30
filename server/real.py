@@ -150,6 +150,13 @@ def list_images(images_dir):
             disks = sorted(f for f in os.listdir(p) if f.endswith(('.qcow2', '.img', '.vmdk', '.iso')))
             if disks:
                 out.append({'name': d, 'disks': disks})
+        elif d.endswith(('.qcow2', '.img', '.vmdk', '.iso')):
+            name = d.rsplit('.', 1)[0]
+            existing = next((x for x in out if x['name'] == name), None)
+            if existing:
+                existing['disks'].append(d)
+            else:
+                out.append({'name': name, 'disks': [d]})
     return out
 
 
@@ -306,11 +313,12 @@ class RealManager:
         imgs = list_images(self.images_dir)
         info = next((i for i in imgs if i['name'] == img), None)
         if not img or not info:
-            return False, 'Pilih image QEMU (taruh file .qcow2 di data/images/qemu/<nama>/)'
+            return False, 'Pilih image QEMU (taruh .qcow2 di data/images/qemu/<nama>/<file> atau langsung di data/images/qemu/<file>)'
         d = self.node_dir(rt, node)
         drives = []
+        src_base = base_dir if os.path.isdir(base_dir) else os.path.join(self.images_dir, 'qemu')
         for disk in info['disks']:
-            src = os.path.join(base_dir, disk)
+            src = os.path.join(src_base, disk)
             if disk.endswith('.iso'):
                 drives += ['-cdrom', src]
                 continue
