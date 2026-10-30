@@ -426,7 +426,10 @@ class RealManager:
             writer.write(text.encode().replace(b'\xff', b'\xff\xff'))
         hub.write = write
         while True:
-            data = await reader.read(4096)
+            try:
+                data = await reader.read(4096)
+            except (ConnectionResetError, ConnectionError, OSError):
+                break
             if not data:
                 break
             txt = tf.feed(data)
