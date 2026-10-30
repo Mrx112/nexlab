@@ -416,3 +416,18 @@ dialog::backdrop { background: rgba(4,6,12,.76); backdrop-filter: blur(5px); }
   .admin-metric { min-height: 106px; padding: 12px; }
   .admin-metric > b { font-size: 18px; }
 }
+.public-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.privacy-note { margin-top: 9px; color: var(--muted); font-size: 10.5px; line-height: 1.5; }
+.visitor-badge { display: inline-flex; align-items: center; gap: 9px; margin-top: 14px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(14,18,31,.6); color: #aab2c7; font-size: 11.5px; }
+.visitor-badge b { color: var(--mint); font-weight: 600; }
+.visitor-badge.hidden-stats { display: none; }
+@media (max-width: 560px) { .public-metrics { grid-template-columns: 1fr; } }
+.visit-chart { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 6px; align-items: end; height: 190px; padding-top: 18px; }
+.visit-chart > p { grid-column: 1 / -1; align-self: center; color: var(--muted); }
+.visit-bar { display: grid; grid-template-rows: auto 1fr auto; gap: 4px; height: 100%; text-align: center; min-width: 0; }
+.visit-bar b { color: var(--text); font-size: 10.5px; font-weight: 600; }
+.visit-bar i { align-self: end; display: block; min-height: 2px; border-radius: 4px 4px 1px 1px; background: linear-gradient(180deg, var(--mint), #6574ff); }
+.visit-bar small { color: var(--muted); font-size: 9.5px; white-space: nowrap; overflow: hidden; }
+.visit-bar.is-today i { box-shadow: 0 0 12px rgba(85,229,189,.45); }
+.admin-logout { width: 100%; margin-top: 12px; }
+@media (max-width: 560px) { .visit-chart { gap: 3px; } .visit-bar small { font-size: 8px; } }

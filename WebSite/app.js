@@ -36,6 +36,15 @@
   async function loadReleaseDownloadCount() {
     const output = document.querySelector("#release-download-count");
     if (!output) return;
+    // GitHub allows 60 unauthenticated API calls per hour per IP, so reuse a recent result.
+    const cacheKey = "nexlab-release-downloads";
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem(cacheKey)); } catch (error) { cached = null; }
+    const format = value => new Intl.NumberFormat(document.documentElement.lang === "id" ? "id-ID" : "en-US").format(value);
+    if (cached && Number.isFinite(cached.total) && Date.now() - cached.at < 30 * 60 * 1000) {
+      output.textContent = format(cached.total);
+      return;
+    }
     try {
       const response = await fetch("https://api.github.com/repos/Mrx112/nexlab/releases?per_page=100", {
         headers: { Accept: "application/vnd.github+json" }
@@ -44,13 +53,45 @@
       const releases = await response.json();
       const total = releases.reduce((sum, release) =>
         sum + release.assets.reduce((assetSum, asset) => assetSum + Number(asset.download_count || 0), 0), 0);
-      output.textContent = new Intl.NumberFormat(
-        document.documentElement.lang === "id" ? "id-ID" : "en-US"
-      ).format(total);
+      output.textContent = format(total);
+      try { localStorage.setItem(cacheKey, JSON.stringify({ total, at: Date.now() })); } catch (error) { /* storage blocked */ }
     } catch (error) {
       console.error("GitHub release download statistics could not be loaded.", error);
+      if (cached && Number.isFinite(cached.total)) {
+        output.textContent = format(cached.total);
+        return;
+      }
       output.textContent = "Unavailable";
       output.title = "Download counts are temporarily unavailable from GitHub.";
+    }
+  }
+
+  async function loadVisitorStats() {
+    const tracking = window.NexLabTracking;
+    const visitsOutput = document.querySelector("#site-visit-count");
+    const visitorsOutput = document.querySelector("#site-visitor-count");
+    const heroVisits = document.querySelector("#hero-visits");
+    const heroVisitors = document.querySelector("#hero-visitors");
+    const format = value => new Intl.NumberFormat(document.documentElement.lang === "id" ? "id-ID" : "en-US").format(value);
+    const show = (visits, visitors) => {
+      visitsOutput.textContent = format(visits);
+      visitorsOutput.textContent = format(visitors);
+      heroVisits.textContent = format(visits);
+      heroVisitors.textContent = format(visitors);
+    };
+    if (!tracking || !tracking.enabled) {
+      visitsOutput.textContent = visitorsOutput.textContent = "Tidak dilacak";
+      document.querySelector("#visitor-badge").classList.add("hidden-stats");
+      return;
+    }
+    try {
+      await tracking.recordVisit("home").catch(error => console.error("Kunjungan tidak dapat dicatat.", error));
+      const [visits, visitors] = await Promise.all([tracking.get("visits"), tracking.get("visitors")]);
+      show(visits, visitors);
+    } catch (error) {
+      console.error("Statistik pengunjung tidak dapat dimuat.", error);
+      visitsOutput.textContent = visitorsOutput.textContent = "Tidak tersedia";
+      document.querySelector("#visitor-badge").classList.add("hidden-stats");
     }
   }
 
@@ -605,8 +646,10 @@
         showToast(`URL unduhan ${link.dataset.download} tidak valid.`);
       }
     }
+    link.addEventListener("click", () => window.NexLabTracking?.recordEvent(`download-${link.dataset.download}`));
   });
   loadReleaseDownloadCount();
+  loadVisitorStats();
   const menuToggle = document.querySelector(".menu-toggle");
   menuToggle.addEventListener("click", () => {
     const isOpen = menuToggle.getAttribute("aria-expanded") === "true";

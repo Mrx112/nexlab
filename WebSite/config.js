@@ -8,5 +8,11 @@ window.NEXLAB_SITE_CONFIG = {
   saweriaUrl: "https://saweria.co/AdiSusilo112",
   paypalUrl: "https://paypal.me/adimr112",
   feedbackEmail: "adimr112@gmail.com",
-  checkoutUrl: ""
+  checkoutUrl: "",
+  // Anonymous visitor counters (no cookies or personal data). Set enabled: false to stop counting.
+  analytics: {
+    enabled: true,
+    api: "https://abacus.jasoncameron.dev",
+    namespace: "nexlab-mrx112-site"
+  }
 };

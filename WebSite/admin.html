@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.github.com https://abacus.jasoncameron.dev; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a0d17">
   <meta name="description" content="NexLab public release and download statistics dashboard.">
@@ -16,6 +19,7 @@
   .admin-login-error { color:#ff6b6b; font-size:13px; min-height:18px; }
   </style>
   <script src="config.js"></script>
+  <script src="tracking.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="admin.js" defer></script>
 </head>
@@ -42,30 +46,48 @@
       <div class="admin-sidebar-title">ADMINISTRATOR</div>
       <nav aria-label="Administrator navigation">
         <button class="admin-nav active" type="button" data-panel="overview">◫ <span>Overview</span></button>
+        <button class="admin-nav" type="button" data-panel="visitors">◉ <span>Visitors</span></button>
         <button class="admin-nav" type="button" data-panel="downloads">↓ <span>Downloads</span></button>
         <button class="admin-nav" type="button" data-panel="releases">◷ <span>Releases</span></button>
         <button class="admin-nav" type="button" data-panel="feedback">✉ <span>Feedback inbox</span></button>
         <a class="admin-nav" href="index.html">↗ <span>Back to website</span></a>
       </nav>
-      <div class="admin-sidebar-note">Public release metrics are read-only. Feedback is sent directly to admin via email; no encryption key management required.</div>
+      <div class="admin-sidebar-note">Visitor counters are anonymous (no cookies or personal data). Release metrics come from GitHub. Feedback arrives by email. The session locks after 30 minutes of inactivity.</div>
+      <button class="button button-quiet admin-logout" id="admin-logout" type="button">Lock dashboard</button>
     </aside>
     <main class="admin-content">
       <div class="admin-heading">
         <div><div class="eyebrow">NEXLAB CONTROL ROOM</div><h1 id="panel-title">Overview</h1><p id="panel-description">Public release activity and download totals.</p></div>
         <button class="button button-outline" id="refresh-metrics" type="button">Refresh data</button>
       </div>
-      <div class="admin-notice"><b>GitHub-only mode</b><span>GitHub provides release asset download counts, but GitHub Pages does not expose website visitor analytics. Visitor totals are not collected.</span></div>
+      <div class="admin-notice"><b>Anonymous analytics</b><span>Website visits are counted with anonymous counters (one view per page per browser session, one unique visitor per browser). Browsers sending Do Not Track or Global Privacy Control are not counted. Download totals come from GitHub release assets.</span></div>
       <p class="admin-status" id="admin-status" role="status">Loading release data…</p>
       <section class="admin-panel active" data-panel-content="overview">
         <div class="admin-metric-grid">
           <article class="admin-metric"><span>Total release asset downloads</span><b id="total-downloads">—</b><small>Across all published releases</small></article>
           <article class="admin-metric"><span>Latest version</span><b id="latest-version">—</b><small id="latest-date">Release date pending</small></article>
-          <article class="admin-metric"><span>Website visits</span><b>Not tracked</b><small>Requires a separate analytics backend</small></article>
+          <article class="admin-metric"><span>Website visits</span><b id="overview-visits">—</b><small id="overview-visitors">Unique visitors pending</small></article>
           <article class="admin-metric"><span>Repository</span><b>Public</b><small>GitHub release data</small></article>
         </div>
         <section class="admin-card">
           <div class="admin-card-heading"><div><h2>Latest platform downloads</h2><p>Counts for the latest release package assets.</p></div><a href="https://github.com/Mrx112/nexlab/releases" target="_blank" rel="noopener noreferrer">Open releases ↗</a></div>
           <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asset</th><th>Downloads</th><th>File size</th><th></th></tr></thead><tbody id="asset-rows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+        </section>
+      </section>
+      <section class="admin-panel" data-panel-content="visitors">
+        <div class="admin-metric-grid">
+          <article class="admin-metric"><span>Total visits</span><b id="visit-total">—</b><small>Page views, all time</small></article>
+          <article class="admin-metric"><span>Unique visitors</span><b id="visitor-total">—</b><small>Distinct browsers</small></article>
+          <article class="admin-metric"><span>Today</span><b id="visit-today">—</b><small id="visit-today-date">UTC day</small></article>
+          <article class="admin-metric"><span>Last 14 days</span><b id="visit-14d">—</b><small id="visit-avg">Daily average pending</small></article>
+        </div>
+        <section class="admin-card">
+          <div class="admin-card-heading"><div><h2>Daily visits</h2><p>Page views per UTC day over the last 14 days.</p></div></div>
+          <div class="admin-card-body"><div class="visit-chart" id="visit-chart" role="img" aria-label="Daily visits chart"><p>Loading…</p></div></div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-heading"><div><h2>Pages &amp; download clicks</h2><p>Views per page and clicks on the download buttons of the website.</p></div></div>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Item</th><th>Type</th><th>Count</th></tr></thead><tbody id="visitor-rows"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
         </section>
       </section>
       <section class="admin-panel" data-panel-content="downloads">

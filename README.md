@@ -204,7 +204,18 @@ Website dibuat oleh Adi Susilo / Creator.
 
 Tombol **Donasi** membuka tautan pembayaran langsung (Saweria/PayPal) sesuai `saweriaUrl` dan `paypalUrl` pada `WebSite/config.js`. Form **Feedback** (tautan navigasi atau tombol *Kirim masukan*) membuka aplikasi email pengunjung dengan pesan yang sudah terisi dan dikirim ke alamat `feedbackEmail` di `WebSite/config.js`; tidak ada kunci enkripsi yang perlu dikelola.
 
-`WebSite/admin.html` menampilkan statistik unduhan rilis publik dan alamat kotak masuk feedback. Halaman ini dikunci dengan sandi yang diverifikasi di browser (hanya hash SHA-256 yang disimpan di source); karena datanya publik, kunci ini adalah penyaring kenyamanan, bukan autentikasi server.
+`WebSite/admin.html` menampilkan statistik pengunjung, unduhan rilis publik, dan alamat kotak masuk feedback.
+
+### Statistik pengunjung
+
+`WebSite/tracking.js` menghitung kunjungan secara anonim memakai penghitung publik (pengaturan `analytics` di `WebSite/config.js`; set `enabled: false` untuk mematikan). Satu tampilan dihitung per halaman per sesi browser, satu pengunjung unik per browser, ditambah total harian dan klik tombol download per OS. Tidak ada cookie atau data pribadi; browser dengan Do Not Track / Global Privacy Control serta pratinjau lokal (`localhost`, `file://`) tidak dihitung. Beranda menampilkan total kunjungan dan pengunjung unik; dashboard admin menampilkan rincian 14 hari, per halaman, dan klik download.
+
+### Keamanan website
+
+- Content-Security-Policy di setiap halaman: skrip hanya dari situs sendiri (tanpa skrip inline), koneksi keluar hanya ke API GitHub dan layanan penghitung, `object-src 'none'`, `base-uri 'self'`.
+- `admin.html` tidak diindeks mesin pencari (`noindex`) dan tidak mengirim referrer.
+- Sandi dasbor diverifikasi di browser dengan PBKDF2-SHA256 (210.000 iterasi, salt); hanya hash yang ada di source. Setelah 5 kali salah, login dikunci sementara dengan jeda yang terus bertambah; sesi terkunci otomatis setelah 30 menit tanpa aktivitas.
+- Karena GitHub Pages tidak punya server, kunci dasbor adalah penyaring sisi browser, bukan autentikasi server — data yang ditampilkan memang data publik.
 
 ## Tangkapan layar dan showcase
 

@@ -117,6 +117,7 @@
     "Pesan untuk admin": "Message for the admin",
     "Tuliskan masukan, kritik, atau saran untuk NexLab.": "Share feedback, criticism, or suggestions for NexLab.",
     "Kirim lewat email": "Send by email",
+    "KIRIM MASUKAN": "SEND FEEDBACK",
     "Pesan untuk admin wajib diisi.": "A message for the admin is required.",
     "Format kunci pribadi tidak didukung.": "Unsupported private-key format.",
     "URL donasi tidak valid: ": "Invalid donation URL: ",
@@ -209,7 +210,20 @@
     "Kunjungan website": "Website visits",
     "Unduhan di GitHub": "Downloads on GitHub",
     "Memuat…": "Loading…",
-    "Tidak tersedia": "Unavailable"
+    "Tidak tersedia": "Unavailable",
+    "Unduhan aplikasi": "App downloads",
+    "Pengunjung unik": "Unique visitors",
+    "pengunjung ·": "visitors ·",
+    "kunjungan": "visits",
+    "Statistik pengunjung dihitung anonim: tanpa cookie, tanpa data pribadi. Browser dengan Do Not Track tidak dihitung.": "Visitor statistics are anonymous: no cookies, no personal data. Browsers with Do Not Track are not counted.",
+    "Pengunjung": "Visitors",
+    "Total kunjungan": "Total visits",
+    "Kunjungan harian": "Daily visits",
+    "14 hari terakhir": "Last 14 days",
+    "Hari ini": "Today",
+    "Kunci dasbor": "Lock dashboard",
+    "Halaman & klik unduhan": "Pages & download clicks",
+    "Analitik anonim": "Anonymous analytics"
   };
   const localeKey = "nexlab-website-language";
   const language = () => localStorage.getItem(localeKey) === "id" ? "id" : "en";

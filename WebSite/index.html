@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.github.com https://abacus.jasoncameron.dev; object-src 'none'; base-uri 'self'; form-action 'self' mailto:; upgrade-insecure-requests">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a0d17">
   <meta name="description" content="NexLab adalah lab jaringan interaktif untuk belajar, merancang topologi, dan menjalankan simulasi jaringan.">
@@ -9,6 +11,7 @@
   <title>NexLab — Rancang. Simulasikan. Hubungkan.</title>
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
+  <script src="tracking.js" defer></script>
   <script src="i18n.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -48,6 +51,7 @@
           <a class="button button-quiet" href="#marketplace"><span class="play-icon" aria-hidden="true">▷</span> Lihat marketplace</a>
         </div>
         <div class="hero-proof"><span class="avatar-stack"><i>R</i><i>A</i><i>N</i></span><span>Dibuat untuk pembelajar, engineer, dan kreator jaringan.</span></div>
+        <div class="visitor-badge" id="visitor-badge" aria-live="polite"><span class="live-pulse" aria-hidden="true"></span><span><b id="hero-visitors">…</b> pengunjung · <b id="hero-visits">…</b> kunjungan</span></div>
       </div>
       <div class="hero-art" aria-label="Ilustrasi topologi jaringan NexLab">
         <div class="art-glow"></div>
@@ -116,9 +120,11 @@
           <a class="download-guide" href="document.html#instalasi">Baca panduan instalasi lengkap <span>↗</span></a>
           <div class="download-meta"><span>Installer mengunduh paket rilis terverifikasi</span><span>Data lab tetap tersimpan saat update</span></div>
           <div class="public-metrics" aria-live="polite">
-            <div><span>Downloads on GitHub</span><b id="release-download-count">Loading…</b></div>
-            <div><span>Website visits</span><b>Not tracked</b></div>
+            <div><span>Unduhan aplikasi</span><b id="release-download-count">Memuat…</b></div>
+            <div><span>Kunjungan website</span><b id="site-visit-count">Memuat…</b></div>
+            <div><span>Pengunjung unik</span><b id="site-visitor-count">Memuat…</b></div>
           </div>
+          <p class="privacy-note">Statistik pengunjung dihitung anonim: tanpa cookie, tanpa data pribadi. Browser dengan Do Not Track tidak dihitung.</p>
         </div>
       </div>
     </section>
