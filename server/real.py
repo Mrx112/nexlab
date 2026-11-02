@@ -14,6 +14,7 @@ Windows / macOS (no admin needed): QEMU VMs linked with UDP sockets, Cloud = NAT
 import asyncio
 import codecs
 import hashlib
+import json
 import os
 import platform
 import shutil
@@ -275,6 +276,12 @@ class RealManager:
                     continue
         raise RuntimeError('no free port')
 
+    @staticmethod
+    def free_tcp_port():
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
+
     # ---------------------------------------------------------------- start
     async def start(self, rt, node):
         if node['type'] == 'netns':
@@ -330,17 +337,27 @@ class RealManager:
                     return False, out
             drives += ['-drive', f'file={ov},if=virtio' if p.get('disk_bus') == 'virtio' else f'file={ov}']
         port = self.free_port()
+        mode = net_mode()
+        qmp_port = self.free_tcp_port() if mode == 'socket' else None
         args = [qbin, '-name', node['name'], '-m', str(int(p.get('ram') or 512)),
                 '-smp', str(int(p.get('cpus') or 1)), '-display', 'none', '-monitor', 'none',
                 '-serial', f'telnet:127.0.0.1:{port},server,nowait', '-boot', 'order=cd'] + drives
+        if qmp_port is not None:
+            args += ['-qmp', f'tcp:127.0.0.1:{qmp_port},server=on,wait=off']
         args += accel_args()[0]
         taps = {}
-        mode = net_mode()
+        nics = []
         for i, ifn in enumerate(node['ifaces']):
             mac = '50:00:%02x:%02x:%02x:%02x' % (rt.id % 256, node['id'] % 256, (node['id'] >> 8) % 256, i)
-            dev = ['-device', f"{p.get('nic_model') or 'e1000'},netdev=n{i},mac={mac}"]
+            model = p.get('nic_model') or 'e1000'
+            device_id = f',id=nic{i}' if mode == 'socket' else ''
+            dev = ['-device', f'{model}{device_id},netdev=n{i},mac={mac}']
             if mode == 'socket':
                 args += ['-netdev', self.socket_netdev(rt, node, ifn, i)] + dev
+                nics.append({'ifn': ifn, 'index': i, 'device_id': f'nic{i}', 'netdev_id': f'n{i}',
+                             'model': model, 'mac': mac,
+                             'config': self.socket_netdev_config(rt, node, ifn, i),
+                             'device': True, 'backend': True})
                 continue
             tap = hname('nt', rt.id, node['id'], ifn)
             sh('ip', 'link', 'del', tap)
@@ -354,7 +371,9 @@ class RealManager:
                                                     stderr=asyncio.subprocess.PIPE, cwd=d)
         hub = Hub(node['name'])
         r = {'proc': proc, 'taps': taps, 'port': port, 'hub': hub, 'type': 'qemu', 'mode': mode,
-             'linksig': self.link_sig(rt, node)}
+             'linksig': self.link_sig(rt, node), 'qmp_port': qmp_port, 'nics': nics,
+             'socket_lock': asyncio.Lock()}
+        r['nicsig'] = self.nic_sig(rt, node)
         self.nodes[(rt.id, node['id'])] = r
         await asyncio.sleep(0.5)
         if proc.returncode is not None:
@@ -373,6 +392,15 @@ class RealManager:
         return base, base + 1                   # side a listens on base, side b on base+1
 
     def socket_netdev(self, rt, node, ifn, i):
+        config = self.socket_netdev_config(rt, node, ifn, i)
+        if config['type'] == 'socket':
+            return f"socket,id=n{i},udp={config['udp']},localaddr={config['localaddr']}"
+        hostfwd = config.get('hostfwd', [])
+        suffix = ''.join(f',hostfwd={item["str"]}' for item in hostfwd)
+        restrict = ',restrict=on' if config.get('restrict') else ''
+        return f'user,id=n{i}{restrict}{suffix}'
+
+    def socket_netdev_config(self, rt, node, ifn, i):
         for l in rt.lab['links']:
             for me, peer in (('a', 'b'), ('b', 'a')):
                 if l[me]['node'] == node['id'] and l[me]['iface'] == ifn:
@@ -382,15 +410,15 @@ class RealManager:
                     if pn['type'] == 'qemu':
                         pa, pb = self.link_ports(rt, l)
                         mine, theirs = (pa, pb) if me == 'a' else (pb, pa)
-                        return f'socket,id=n{i},udp=127.0.0.1:{theirs},localaddr=127.0.0.1:{mine}'
+                        return {'type': 'socket', 'id': f'n{i}', 'udp': f'127.0.0.1:{theirs}',
+                                'localaddr': f'127.0.0.1:{mine}'}
                     if pn['type'] == 'cloud':
-                        # NAT to the host's network/internet (DHCP 10.0.2.15/24, gw 10.0.2.2)
-                        fwd = ''
+                        config = {'type': 'user', 'id': f'n{i}'}
                         hp = str(pn['props'].get('hostfwd') or '').strip()
                         if hp.isdigit():
-                            fwd = f',hostfwd=tcp::{hp}-:22'
-                        return f'user,id=n{i}{fwd}'
-        return f'user,id=n{i},restrict=on'
+                            config['hostfwd'] = [{'str': f'tcp::{hp}-:22'}]
+                        return config
+        return {'type': 'user', 'id': f'n{i}', 'restrict': True}
 
     @staticmethod
     def link_sig(rt, node):
@@ -401,13 +429,143 @@ class RealManager:
         return sorted(sig)
 
     def stale_links(self, rt):
-        """Socket-mode VMs whose cabling changed since boot (need a restart)."""
+        """Socket-mode VMs whose live NIC configuration needs to be refreshed."""
         out = []
         for (lab, nid), r in self.nodes.items():
-            if lab == rt.id and r.get('mode') == 'socket' and nid in rt.by_id:
-                if r.get('linksig') != self.link_sig(rt, rt.by_id[nid]):
+            if lab == rt.id and r.get('mode') == 'socket' and nid in rt.by_id and self.is_running(lab, nid):
+                node = rt.by_id[nid]
+                if (r.get('linksig') != self.link_sig(rt, node)
+                        or r.get('nicsig') != self.nic_sig(rt, node)):
                     out.append(nid)
         return out
+
+    def nic_sig(self, rt, node):
+        model = node['props'].get('nic_model') or 'e1000'
+        return [(ifn, model, self.socket_netdev_config(rt, node, ifn, i))
+                for i, ifn in enumerate(node['ifaces'])]
+
+    async def _qmp_execute(self, reader, writer, request_id, command, arguments=None, timeout=10,
+                           event=None, event_device=None):
+        message = {'execute': command, 'id': request_id}
+        if arguments is not None:
+            message['arguments'] = arguments
+        writer.write(json.dumps(message).encode() + b'\r\n')
+        await writer.drain()
+        event_seen = False
+        while True:
+            line = await asyncio.wait_for(reader.readline(), timeout)
+            if not line:
+                raise ConnectionError('Koneksi QMP terputus.')
+            response = json.loads(line)
+            data = response.get('data') or {}
+            if response.get('event') == event and data.get('device') == event_device:
+                event_seen = True
+            if response.get('id') != request_id:
+                continue
+            if 'error' in response:
+                error = response['error']
+                raise RuntimeError(error.get('desc') or str(error))
+            return response.get('return'), event_seen
+
+    async def _qmp_wait_event(self, reader, event, device_id, timeout=15):
+        while True:
+            line = await asyncio.wait_for(reader.readline(), timeout)
+            if not line:
+                raise ConnectionError('Koneksi QMP terputus sebelum NIC dilepas.')
+            message = json.loads(line)
+            data = message.get('data') or {}
+            if message.get('event') == event and data.get('device') == device_id:
+                return
+
+    async def _qmp_open(self, port):
+        reader, writer = await asyncio.wait_for(asyncio.open_connection('127.0.0.1', port), 5)
+        try:
+            greeting = await asyncio.wait_for(reader.readline(), 5)
+            if not greeting or 'QMP' not in json.loads(greeting):
+                raise RuntimeError('QEMU tidak memberikan greeting QMP yang valid.')
+            await self._qmp_execute(reader, writer, 1, 'qmp_capabilities', timeout=5)
+            return reader, writer
+        except (OSError, ValueError, RuntimeError, asyncio.TimeoutError):
+            writer.close()
+            await writer.wait_closed()
+            raise
+
+    async def reset_socket_node(self, rt, node):
+        key = (rt.id, node['id'])
+        r = self.nodes.get(key)
+        if not r or not self.is_running(*key):
+            return False, 'VM QEMU tidak sedang berjalan.'
+        if r.get('mode') != 'socket' or not r.get('qmp_port'):
+            return False, 'VM ini tidak menggunakan jaringan socket UDP.'
+
+        async with r['socket_lock']:
+            reader = writer = None
+            try:
+                reader, writer = await self._qmp_open(r['qmp_port'])
+                request_id = 2
+                for nic in list(r['nics']):
+                    if nic.get('device'):
+                        try:
+                            deleted = await self._qmp_execute(
+                                reader, writer, request_id, 'device_del', {'id': nic['device_id']},
+                                event='DEVICE_DELETED', event_device=nic['device_id'])
+                            request_id += 1
+                            if not deleted[1]:
+                                await self._qmp_wait_event(reader, 'DEVICE_DELETED', nic['device_id'])
+                        except RuntimeError as error:
+                            if 'not found' not in str(error).lower():
+                                raise
+                        nic['device'] = False
+                    if nic.get('backend'):
+                        try:
+                            await self._qmp_execute(reader, writer, request_id, 'netdev_del',
+                                                    {'id': nic['netdev_id']})
+                            request_id += 1
+                        except RuntimeError as error:
+                            if 'not found' not in str(error).lower():
+                                raise
+                        nic['backend'] = False
+                    r['nics'].remove(nic)
+
+                model = node['props'].get('nic_model') or 'e1000'
+                for index, ifn in enumerate(node['ifaces']):
+                    mac = '50:00:%02x:%02x:%02x:%02x' % (
+                        rt.id % 256, node['id'] % 256, (node['id'] >> 8) % 256, index)
+                    config = self.socket_netdev_config(rt, node, ifn, index)
+                    nic = {'ifn': ifn, 'index': index, 'device_id': f'nic{index}',
+                           'netdev_id': f'n{index}', 'model': model, 'mac': mac,
+                           'config': config, 'device': False, 'backend': False}
+                    await self._qmp_execute(reader, writer, request_id, 'netdev_add', config)
+                    request_id += 1
+                    nic['backend'] = True
+                    r['nics'].append(nic)
+                    await self._qmp_execute(reader, writer, request_id, 'device_add',
+                                            {'driver': model, 'id': nic['device_id'],
+                                             'netdev': nic['netdev_id'], 'mac': mac})
+                    request_id += 1
+                    nic['device'] = True
+
+                r['linksig'] = self.link_sig(rt, node)
+                r['nicsig'] = self.nic_sig(rt, node)
+                return True, ''
+            except (OSError, ValueError, RuntimeError, asyncio.TimeoutError) as error:
+                return False, f'Hard Reset Link Socket gagal: {error}'
+            finally:
+                if writer is not None:
+                    writer.close()
+                    try:
+                        await writer.wait_closed()
+                    except OSError:
+                        pass
+
+    async def refresh_socket_links(self, rt):
+        errors = []
+        for nid in self.stale_links(rt):
+            node = rt.by_id[nid]
+            ok, error = await self.reset_socket_node(rt, node)
+            if not ok:
+                errors.append({'node': nid, 'name': node['name'], 'error': error})
+        return errors
 
     async def _telnet_backend(self, r):
         hub = r['hub']

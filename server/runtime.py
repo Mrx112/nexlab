@@ -489,7 +489,8 @@ class LabRuntime:
         for n in self.lab['nodes']:
             st = n.get('state') or {}
             nodes[n['id']] = {'running': self.is_running(n['id']), 'kind': kind_of(n['type']),
-                              'hostname': st.get('hostname')}
+                              'hostname': st.get('hostname'),
+                              'socket': bool(self.mgr.real.nodes.get((self.id, n['id']), {}).get('mode') == 'socket')}
             if n['type'] in HOST:
                 nodes[n['id']]['ip'] = st.get('ip') or ('DHCP' if st.get('dhcp') else '')
             elif n['type'] == 'netns':

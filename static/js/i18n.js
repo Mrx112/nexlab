@@ -237,7 +237,9 @@
     "simulasi & real": "simulation & real mode",
     "siap": "ready",
     "belum tersedia": "not available",
-    "Kabel VM berubah: matikan & nyalakan ulang": "VM links changed: power off and restart",
+    "Socket UDP perlu refresh": "UDP socket needs refreshing",
+    "Hard Reset Link Socket": "Hard Reset Link Socket",
+    "Socket UDP berhasil diinisialisasi ulang.": "UDP socket was reinitialized successfully.",
     "belum (QEMU tidak ada)": "unavailable (QEMU is not installed)",
     "Waktu aktif": "Uptime",
     "Pengguna OS server": "User OS server"
