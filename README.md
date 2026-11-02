@@ -24,7 +24,7 @@ Workflow rilis menolak penerbit selain `Mrx112` dan menggunakan environment `nex
 Pengguna akhir memakai rilis aplikasi dan tidak memerlukan akses repository atau file source. Kontrol GitHub melindungi source/rilis resmi, bukan salinan yang sudah diunduh: pemilik komputer masih dapat memodifikasi binary lokal. Jangan memasukkan password ke source, commit, log, atau chat; bila password sempat dibagikan, segera ganti.
 
 **Editor topologi**
-- Drag & drop perangkat, kabel antar port (pilih interface seperti PNETLab/Packet Tracer), lampu status link (hijau/kuning/merah), label interface, catatan, zoom/pan, menu klik-kanan, autosave.
+- Drag & drop perangkat, kabel antar port (pilih interface seperti PNETLab/Packet Tracer), lampu status link (hijau/kuning/merah); pada link QEMU indikator memeriksa listener UDP backend, label interface, catatan, zoom/pan, menu klik-kanan, autosave.
 - Perubahan kabel QEMU saat VM berjalan otomatis menyambungkan ulang NIC socket UDP lewat QMP; admin juga dapat memakai **Hard Reset Link Socket** dari menu node jika perlu.
 - Console HTML5 (xterm.js) di jendela mengambang, bisa banyak sekaligus atau dibuka di tab baru.
 - Panel inspektor: nyala/mati/wipe, IP PC lewat GUI (static/DHCP, seperti tab Desktop Packet Tracer), layanan DHCP & DNS di Server, uji ping cepat dengan animasi paket, lihat running/startup-config.
@@ -128,7 +128,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.7`. Setelah rilis `v1.4.7` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.8`. Setelah rilis `v1.4.8` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
 
 ### Instalasi dari source (developer/server)
 

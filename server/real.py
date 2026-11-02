@@ -13,6 +13,7 @@ Windows / macOS (no admin needed): QEMU VMs linked with UDP sockets, Cloud = NAT
 """
 import asyncio
 import codecs
+import errno
 import hashlib
 import json
 import os
@@ -437,7 +438,45 @@ class RealManager:
                 if (r.get('linksig') != self.link_sig(rt, node)
                         or r.get('nicsig') != self.nic_sig(rt, node)):
                     out.append(nid)
+                    continue
+                if any(self.socket_endpoint_status(rt, node, ifn)[0] != 'up'
+                       for i, ifn in enumerate(node['ifaces'])
+                       if self.socket_netdev_config(rt, node, ifn, i)['type'] == 'socket'):
+                    out.append(nid)
         return out
+
+    def socket_endpoint_status(self, rt, node, ifn):
+        key = (rt.id, node['id'])
+        r = self.nodes.get(key)
+        if not r or not self.is_running(*key):
+            return 'off', ''
+        if r.get('mode') != 'socket':
+            return 'up', ''
+
+        try:
+            index = node['ifaces'].index(ifn)
+        except ValueError:
+            return 'down', 'Interface tidak terdaftar pada VM.'
+        config = self.socket_netdev_config(rt, node, ifn, index)
+        if config['type'] != 'socket':
+            return 'up', ''
+        model = node['props'].get('nic_model') or 'e1000'
+        nic = next((item for item in r.get('nics', []) if item.get('ifn') == ifn), None)
+        if (not nic or not nic.get('device') or not nic.get('backend')
+                or nic.get('config') != config or nic.get('model') != model):
+            return 'down', 'Konfigurasi NIC QEMU belum tersinkron dengan topologi.'
+
+        try:
+            host, port = config['localaddr'].rsplit(':', 1)
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                probe.bind((host, int(port)))
+        except OSError as error:
+            if error.errno == errno.EADDRINUSE or getattr(error, 'winerror', None) == 10048:
+                return 'up', ''
+            return 'wait', f'Tidak dapat memeriksa listener UDP {host}:{port}: {error}'
+        except (KeyError, ValueError) as error:
+            return 'wait', f'Konfigurasi listener UDP tidak valid: {error}'
+        return 'down', f'Listener UDP QEMU tidak terikat pada {host}:{port}.'
 
     def nic_sig(self, rt, node):
         model = node['props'].get('nic_model') or 'e1000'
