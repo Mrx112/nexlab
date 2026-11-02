@@ -502,6 +502,7 @@ class LabRuntime:
             sides = []
             for side in ('a', 'b'):
                 nid, ifn = l[side]['node'], l[side]['iface']
+                peer_nid = l['b' if side == 'a' else 'a']['node']
                 k = kind_of(self.by_id[nid]['type'])
                 if k == 'sim':
                     if not self.is_running(nid):
@@ -514,6 +515,12 @@ class LabRuntime:
                         sides.append('wait')
                 elif k == 'cloud':
                     sides.append('up')
+                elif (self.by_id[nid]['type'] == 'qemu'
+                      and self.by_id[peer_nid]['type'] == 'qemu'):
+                    state, error = self.mgr.real.socket_endpoint_status(self, self.by_id[nid], ifn)
+                    sides.append(state)
+                    if error:
+                        nodes[nid]['socket_error'] = error
                 else:
                     sides.append('up' if self.is_running(nid) else 'off')
             ka = kind_of(self.by_id[l['a']['node']]['type'])

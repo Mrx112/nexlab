@@ -216,10 +216,13 @@ class Editor {
     const on = this.lab.nodes.filter(n => act(n) && this.running(n.id)).length;
     const caps = App.sys?.caps || {};
     const stale = this.status?.restart || [];
+    const socketErrors = Object.entries(this.status?.nodes || {})
+      .filter(([, node]) => node.socket_error)
+      .map(([id, node]) => `${this.nodeById(+id)?.name || id}: ${node.socket_error}`);
     sb.innerHTML = `<span><span class="led ${on ? 'on' : ''}"></span> ${on}/${this.lab.nodes.filter(act).length} node menyala</span>
       <span>${this.lab.links.length} kabel</span>
       <span>Server ${esc({ linux: 'Linux', windows: 'Windows', macos: 'macOS' }[caps.os] || '')} · VM ${caps.avail?.qemu ? `<span class="yes">siap</span> (${esc(caps.netmode === 'tap' ? 'bridge' : 'socket')})` : 'belum (QEMU tidak ada)'}</span>
-      ${stale.length ? `<span class="warn">Socket UDP perlu refresh: ${esc(stale.map(i => this.nodeById(i)?.name).join(', '))}</span>
+      ${stale.length ? `<span class="warn" ${socketErrors.length ? `title="${esc(socketErrors.join(' | '))}"` : ''}>Socket UDP bermasalah: ${esc(stale.map(i => this.nodeById(i)?.name).join(', '))}</span>
         ${App.me?.role === 'admin' ? stale.map(i => `<button class="btn xs" data-reset-socket="${i}">Hard Reset Link Socket</button>`).join('') : ''}` : ''}
       <span>2× klik node = console · klik kanan = menu</span>`;
     sb.querySelectorAll('[data-reset-socket]').forEach(button => {
@@ -1016,7 +1019,7 @@ class Editor {
         ${imgs.length ? '' : '<div class="tip">Belum ada image. Salin misalnya <span class="mono">vios-adventerprisek9.qcow2</span> ke <span class="mono">data/images/qemu/vios/</span> lalu muat ulang halaman.</div>'}
         <div class="row">${inp('ram', 'RAM (MB)', 'number')}${inp('cpus', 'vCPU', 'number')}${inp('nics', 'Jumlah NIC', 'number')}</div>
         <div class="field"><label>Model NIC</label><select class="input" data-prop="nic_model">${['e1000', 'virtio-net-pci', 'vmxnet3', 'rtl8139', 'i82559er'].map(m => `<option ${m === p.nic_model ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
-        <div class="tip">Akselerasi: <b>${esc(caps.accel || '-')}</b>. Jaringan VM: ${caps.netmode === 'tap' ? 'Linux bridge (kabel bisa diubah saat VM menyala)' : 'socket UDP antar VM — <b>setelah mengubah kabel, matikan lalu nyalakan ulang VM</b>'}.</div>
+        <div class="tip">Akselerasi: <b>${esc(caps.accel || '-')}</b>. Jaringan VM: ${caps.netmode === 'tap' ? 'Linux bridge (kabel bisa diubah saat VM menyala)' : 'socket UDP antar VM — perubahan kabel/NIC otomatis diinisialisasi ulang; gunakan menu node untuk reset socket manual bila perlu'}.</div>
         ${caps.avail?.qemu ? '' : `<div class="tip">QEMU belum terpasang di server: <span class="mono">${{ windows: 'winget install SoftwareFreedomConservancy.QEMU', macos: 'brew install qemu', linux: 'sudo apt install qemu-system-x86 qemu-utils' }[caps.os] || 'pasang QEMU'}</span></div>`}`;
     }
     if (n.type === 'netns') return `<h5>Jaringan host Linux</h5>${inp('ip', 'IP/prefix', 'text', '192.168.1.50/24')}${inp('gw', 'Gateway', 'text', '192.168.1.1')}
