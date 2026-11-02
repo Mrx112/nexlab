@@ -34,7 +34,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.6'
+VERSION = '1.4.7'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -628,13 +628,16 @@ async def lab_topology(req):
     lab_access(req, lid)
     d = await req.json()
     rt = req.app['mgr'].get(lid)
-    removed_real = [rt.by_id[n] for n in rt.by_id if n not in {int(x['id']) for x in d.get('nodes', [])}
+    new_types = {int(x['id']): x.get('type') for x in d.get('nodes', [])}
+    removed_real = [rt.by_id[n] for n in rt.by_id
+                    if new_types.get(n) != rt.by_id[n]['type']
                     and kind_of(rt.by_id[n]['type']) == 'real']
     for n in removed_real:
         await req.app['real'].stop(rt, n)
     rt.update_topology(d.get('nodes', []), d.get('links', []), d.get('notes'))
     await req.app['real'].sync_links(rt)
-    return web.json_response({'ok': True, 'status': rt.status()})
+    socket_errors = await req.app['real'].refresh_socket_links(rt)
+    return web.json_response({'ok': not socket_errors, 'socket_errors': socket_errors, 'status': rt.status()})
 
 
 async def lab_delete(req):
@@ -664,6 +667,22 @@ async def lab_status(req):
     lid = int(req.match_info['lid'])
     lab_access(req, lid)
     return web.json_response(req.app['mgr'].get(lid).status())
+
+
+async def lab_socket_reset(req):
+    lid = int(req.match_info['lid'])
+    nid = int(req.match_info['nid'])
+    lab_access(req, lid)
+    if req['user']['role'] != 'admin':
+        return jerr('Hanya admin yang dapat mereset socket link QEMU.', 403)
+    rt = req.app['mgr'].get(lid)
+    node = rt.by_id.get(nid)
+    if not node or node['type'] != 'qemu':
+        return jerr('Node QEMU tidak ditemukan.', 404)
+    ok, error = await req.app['real'].reset_socket_node(rt, node)
+    if not ok:
+        return jerr(error, 409 if 'tidak sedang berjalan' in error else 502)
+    return web.json_response({'ok': True, 'status': rt.status()})
 
 
 async def lab_power(req):
@@ -1205,6 +1224,7 @@ def build_app(data_dir, port=8080):
     r.add_get('/api/labs/{lid}/export', lab_export)
     r.add_get('/api/labs/{lid}/status', lab_status)
     r.add_post('/api/labs/{lid}/power/{action:start|stop|wipe}', lab_power)
+    r.add_post('/api/labs/{lid}/nodes/{nid}/socket/reset', lab_socket_reset)
     r.add_get('/api/labs/{lid}/nodes/{nid}/config', node_config)
     r.add_post('/api/labs/{lid}/nodes/{nid}/host', node_host)
     r.add_post('/api/labs/{lid}/ping', node_ping)

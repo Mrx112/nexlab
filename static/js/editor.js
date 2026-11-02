@@ -215,11 +215,16 @@ class Editor {
     const act = n => this.tpl[n.type]?.kind !== 'cloud';
     const on = this.lab.nodes.filter(n => act(n) && this.running(n.id)).length;
     const caps = App.sys?.caps || {};
+    const stale = this.status?.restart || [];
     sb.innerHTML = `<span><span class="led ${on ? 'on' : ''}"></span> ${on}/${this.lab.nodes.filter(act).length} node menyala</span>
       <span>${this.lab.links.length} kabel</span>
       <span>Server ${esc({ linux: 'Linux', windows: 'Windows', macos: 'macOS' }[caps.os] || '')} · VM ${caps.avail?.qemu ? `<span class="yes">siap</span> (${esc(caps.netmode === 'tap' ? 'bridge' : 'socket')})` : 'belum (QEMU tidak ada)'}</span>
-      ${(this.status?.restart || []).length ? `<span class="warn">Kabel VM berubah: matikan & nyalakan ulang ${esc(this.status.restart.map(i => this.nodeById(i)?.name).join(', '))}</span>` : ''}
+      ${stale.length ? `<span class="warn">Socket UDP perlu refresh: ${esc(stale.map(i => this.nodeById(i)?.name).join(', '))}</span>
+        ${App.me?.role === 'admin' ? stale.map(i => `<button class="btn xs" data-reset-socket="${i}">Hard Reset Link Socket</button>`).join('') : ''}` : ''}
       <span>2× klik node = console · klik kanan = menu</span>`;
+    sb.querySelectorAll('[data-reset-socket]').forEach(button => {
+      button.onclick = () => this.resetSocket(this.nodeById(+button.dataset.resetSocket));
+    });
   }
 
   // ---------------------------------------------------------------- view
@@ -454,6 +459,8 @@ class Editor {
       ['Wipe', () => this.power('wipe', [n.id]), '', k === 'cloud' || k === 'remote', 'wipe'],
       ['Console', () => this.openConsole(n), '2×klik', k === 'cloud', 'term'],
       ['Lihat running-config', () => this.showConfig(n), '', k !== 'sim', 'file'],
+      ...(run && n.type === 'qemu' && this.status?.nodes?.[n.id]?.socket && App.me?.role === 'admin'
+        ? [['Hard Reset Link Socket', () => this.resetSocket(n), '', false, 'refresh']] : []),
       '-',
       ['Hubungkan kabel dari sini', () => { this.setTool('cable'); this.pickPort(n, { clientX: x, clientY: y }); }, '', false, 'cable'],
       ['Edit', () => this.edit('node', n.id), '', false, 'edit'],
@@ -700,7 +707,10 @@ class Editor {
         links: this.lab.links, notes: this.lab.notes || []
       };
       const r = await App.api('PUT', `/api/labs/${this.id}/topology`, body);
-      if (r && r.status) { this.status = r.status; this.drawLinks(); this.drawNodes(); }
+      if (r && r.status) {
+        this.status = r.status; this.drawLinks(); this.drawNodes(); this.statusbar();
+        (r.socket_errors || []).forEach(error => App.toast(`${error.name}: ${error.error}`, true));
+      }
       if (reload) await this.reloadLab();
     }, reload ? 50 : 500);
   }
@@ -729,6 +739,14 @@ class Editor {
     (r.errors || []).forEach(e => App.toast(e, true));
     this.status = r.status;
     if (action === 'wipe') await this.reloadLab(); else { this.drawNodes(); this.drawLinks(); this.statusbar(); this.inspect(); }
+  }
+  async resetSocket(n) {
+    if (!n || !confirm(`Hard Reset Link Socket pada ${n.name}? NIC QEMU akan tersambung ulang dan koneksi guest terputus sesaat.`)) return;
+    const r = await App.api('POST', `/api/labs/${this.id}/nodes/${n.id}/socket/reset`, {});
+    if (!r) return;
+    this.status = r.status;
+    this.drawNodes(); this.drawLinks(); this.statusbar(); this.inspect();
+    App.toast(`Socket UDP ${n.name} berhasil diinisialisasi ulang.`);
   }
   async openConsole(n) {
     const k = this.tpl[n.type].kind;
