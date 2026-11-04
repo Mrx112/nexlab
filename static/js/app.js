@@ -49,6 +49,147 @@ const App = {
     init && init(bg.querySelector('.modal'), close);
     return close;
   },
+  exportLabModal(ids) {
+    if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
+    this.modal(`<h3>Ekspor lab</h3>
+      <div class="field"><label for="exportFormat">Format ekspor</label><select class="input" id="exportFormat">
+        <option value="json">NexLab JSON (.nexlab.json)</option>
+        <option value="pkt">Cisco Packet Tracer (.pkt)</option>
+        <option value="configs">Konfigurasi perangkat (.txt)</option>
+      </select></div>
+      <fieldset id="exportContents" style="border:0;padding:0;margin:0">
+        <legend style="font-size:13px;font-weight:600;margin-bottom:8px">Isi file NexLab JSON</legend>
+        <div class="tpl-list">
+          <label class="tpl"><input type="checkbox" data-export-part="topology" checked> Topologi (node dan koneksi)</label>
+          <label class="tpl"><input type="checkbox" data-export-part="configs" checked> Konfigurasi perangkat</label>
+          <label class="tpl"><input type="checkbox" data-export-part="notes" checked> Catatan</label>
+          <label class="tpl"><input type="checkbox" data-export-part="workbook" checked> Workbook / penilaian</label>
+          <label class="tpl"><input type="checkbox" data-export-part="map3d" checked> Peta 3D</label>
+          <label class="tpl"><input type="checkbox" data-export-part="timer" checked> Timer lab</label>
+        </div>
+      </fieldset>
+      <p class="muted" id="exportFormatHelp">Pilih bagian yang akan disertakan dalam file NexLab JSON.</p>
+      <div class="modal-foot"><button class="btn" data-close>Batal</button><button class="btn primary" id="exportGo">${UI.down} Ekspor</button></div>`, false, (m, close) => {
+      const format = m.querySelector('#exportFormat');
+      const contents = m.querySelector('#exportContents');
+      const help = m.querySelector('#exportFormatHelp');
+      const update = () => {
+        const json = format.value === 'json';
+        contents.disabled = !json;
+        contents.querySelectorAll('input').forEach(input => { input.disabled = !json; });
+        help.textContent = json
+          ? 'Pilih bagian yang akan disertakan dalam file NexLab JSON.'
+          : format.value === 'pkt'
+            ? 'Packet Tracer hanya mendukung topologi dan konfigurasi yang kompatibel.'
+            : 'File teks berisi konfigurasi perangkat simulasi yang tersedia.';
+      };
+      format.onchange = update;
+      update();
+      m.querySelector('#exportGo').onclick = async () => {
+        const selectedFormat = format.value;
+        const parts = Object.fromEntries([...contents.querySelectorAll('[data-export-part]')].map(input => [input.dataset.exportPart, input.checked]));
+        close();
+        for (const [index, id] of ids.entries()) {
+          if (index) await new Promise(resolve => setTimeout(resolve, 450));
+          const query = selectedFormat === 'json'
+            ? `?${new URLSearchParams(Object.entries(parts).map(([key, enabled]) => [key, enabled ? '1' : '0']))}`
+            : '';
+          const endpoint = selectedFormat === 'pkt' ? 'export-pkt' : selectedFormat === 'configs' ? 'configs' : `export${query}`;
+          await this.download(`/api/labs/${id}/${endpoint}`);
+        }
+      };
+    });
+  },
+  importLabModal() {
+    this.modal(`<h3>Impor lab</h3>
+      <div class="field"><label for="importFormat">Format file</label><select class="input" id="importFormat">
+        <option value="json">NexLab JSON (.nexlab.json)</option>
+        <option value="pkt">Cisco Packet Tracer (.pkt)</option>
+      </select></div>
+      <div class="field"><label for="importFile">Pilih file</label><input class="input" id="importFile" type="file" accept=".nexlab.json,.json,application/json"></div>
+      <fieldset id="importContents" style="border:0;padding:0;margin:0">
+        <legend style="font-size:13px;font-weight:600;margin-bottom:8px">Isi yang akan diimpor dari NexLab JSON</legend>
+        <div class="tpl-list">
+          <label class="tpl"><input type="checkbox" data-import-part="topology" checked> Topologi (node dan koneksi)</label>
+          <label class="tpl"><input type="checkbox" data-import-part="configs" checked> Konfigurasi perangkat</label>
+          <label class="tpl"><input type="checkbox" data-import-part="notes" checked> Catatan</label>
+          <label class="tpl"><input type="checkbox" data-import-part="workbook" checked> Workbook / penilaian</label>
+          <label class="tpl"><input type="checkbox" data-import-part="map3d" checked> Peta 3D</label>
+          <label class="tpl"><input type="checkbox" data-import-part="timer" checked> Timer lab</label>
+        </div>
+      </fieldset>
+      <p class="muted" id="importFormatHelp">Pilih bagian yang akan dimasukkan ke lab baru.</p>
+      <div class="modal-foot"><button class="btn" data-close>Batal</button><button class="btn primary" id="importGo" disabled>${UI.up} Impor lab</button></div>`, false, (m, close) => {
+      const format = m.querySelector('#importFormat');
+      const file = m.querySelector('#importFile');
+      const contents = m.querySelector('#importContents');
+      const help = m.querySelector('#importFormatHelp');
+      const go = m.querySelector('#importGo');
+      const update = () => {
+        const json = format.value === 'json';
+        file.accept = json ? '.nexlab.json,.json,application/json' : '.pkt,application/octet-stream';
+        contents.disabled = !json;
+        contents.querySelectorAll('input').forEach(input => { input.disabled = !json; });
+        help.textContent = json
+          ? 'Pilih bagian yang akan dimasukkan ke lab baru.'
+          : 'File Packet Tracer diimpor sebagai topologi lab baru.';
+        go.disabled = !file.files.length;
+      };
+      format.onchange = () => { file.value = ''; update(); };
+      file.onchange = update;
+      update();
+      go.onclick = async () => {
+        const selected = file.files[0];
+        if (!selected) return;
+        const selectedFormat = format.value;
+        const parts = Object.fromEntries([...contents.querySelectorAll('[data-import-part]')].map(input => [input.dataset.importPart, input.checked]));
+        close();
+        await this.importLabFile(selected, selectedFormat, parts);
+      };
+    });
+  },
+  async importLabFile(file, format, parts) {
+    const filename = file.name.toLowerCase();
+    if (format === 'pkt') {
+      if (!filename.endsWith('.pkt')) return this.toast('Pilih file Packet Tracer dengan ekstensi .pkt', true);
+      try {
+        const response = await fetch('/api/labs/import-pkt', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'X-NexLab': '1', 'X-Filename': encodeURIComponent(file.name) }, body: file
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 401) { this.showAuth(); return; }
+        if (!response.ok) return this.toast(result.error || `Impor .pkt gagal (${response.status})`, true);
+        (result.warnings || []).forEach(w => this.toast(w, true));
+        this.toast('Topologi Packet Tracer diimpor ke lab baru');
+        location.hash = '#/lab/' + result.id;
+      } catch (e) { this.toast('Server tidak dapat dihubungi saat mengimpor .pkt', true); }
+      return;
+    }
+    if (!filename.endsWith('.json')) return this.toast('Pilih file NexLab JSON dengan ekstensi .json', true);
+    let lab;
+    try { lab = JSON.parse(await file.text()); }
+    catch (e) { return this.toast('File bukan JSON yang valid', true); }
+    const data = lab?.data || lab;
+    if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.links || [])) {
+      return this.toast('File bukan lab NexLab yang valid', true);
+    }
+    if (!parts.topology) { data.nodes = []; data.links = []; }
+    if (!parts.configs) {
+      data.nodes.forEach(node => { delete node.state; delete node.startup; delete node.power; });
+      delete data.configsets;
+    }
+    if (!parts.notes) data.notes = [];
+    if (!parts.workbook) delete data.workbook;
+    if (!parts.map3d) delete data.map3d;
+    if (!parts.timer) delete data.timer;
+    const result = await this.api('POST', '/api/labs', {
+      name: lab.name || file.name.replace(/\.nexlab\.json$|\.json$/i, ''),
+      description: lab.description || '',
+      data
+    });
+    if (result) { this.toast('Lab diimpor'); location.hash = '#/lab/' + result.id; }
+  },
   icons(root) {
     (root || document).querySelectorAll('[data-ico]').forEach(el => {
       if (el.dataset.icoDone) return; el.dataset.icoDone = 1;
@@ -298,7 +439,6 @@ const App = {
           <button class="btn sm ai" id="bAi">${UI.spark} Buat dengan Claude</button>
           <button class="btn sm" id="bImport">${UI.up} Impor</button>
           <button class="btn sm" id="bExp">${UI.down} Ekspor</button>
-          <button class="btn sm" id="bPkt">${UI.down} Ekspor .pkt</button>
           <button class="btn sm danger" id="bDel">${UI.trash} Hapus</button>
           <span class="grow"></span>
           <input class="input sm" id="fmq" placeholder="Cari lab…" aria-label="Cari lab">
@@ -317,14 +457,6 @@ const App = {
       if (cur && ids.includes(cur.id)) cur = null;
       load();
     };
-    const exp = ids => {
-      if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
-      ids.forEach((id, i) => setTimeout(() => { const a = document.createElement('a'); a.href = `/api/labs/${id}/export`; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); }, i * 400));
-    };
-    const expPkt = ids => {
-      if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
-      ids.forEach((id, i) => setTimeout(() => this.download(`/api/labs/${id}/export-pkt`), i * 800));
-    };
     const preview = id => {
       cur = labs.find(l => l.id === id) || null;
       v.querySelectorAll('.fm-t tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.id === id));
@@ -334,10 +466,9 @@ const App = {
         <div class="pv-body"><h3>${esc(cur.name)}</h3>${cur.description ? `<p class="muted" style="margin:0 0 10px">${esc(cur.description)}</p>` : ''}
           <dl class="kv"><dt>Perangkat</dt><dd>${cur.nodes}</dd><dt>Kabel</dt><dd>${cur.links}</dd><dt>Menyala</dt><dd><span class="led ${cur.running ? 'on' : ''}"></span> ${cur.running}</dd>
             <dt>Diubah</dt><dd>${fmt(cur.updated)}</dd>${all ? `<dt>Pemilik</dt><dd>${esc(cur.owner)}</dd>` : ''}</dl>
-          <div class="pv-actions"><button class="btn primary" data-p="open">${UI.play} Buka lab</button><button class="btn" data-p="exp">${UI.down} Ekspor</button><button class="btn" data-p="pkt">${UI.down} Ekspor .pkt</button><span class="grow"></span><button class="btn danger" data-p="del">${UI.trash} Hapus</button></div></div>`;
+          <div class="pv-actions"><button class="btn primary" data-p="open">${UI.play} Buka lab</button><button class="btn" data-p="exp">${UI.down} Ekspor</button><span class="grow"></span><button class="btn danger" data-p="del">${UI.trash} Hapus</button></div></div>`;
       p.querySelector('[data-p=open]').onclick = () => { location.hash = '#/lab/' + cur.id; };
-      p.querySelector('[data-p=exp]').onclick = () => exp([cur.id]);
-      p.querySelector('[data-p=pkt]').onclick = () => expPkt([cur.id]);
+      p.querySelector('[data-p=exp]').onclick = () => this.exportLabModal([cur.id]);
       p.querySelector('[data-p=del]').onclick = () => del([cur.id]);
     };
     const render = () => {
@@ -371,37 +502,9 @@ const App = {
     $('#fmq').oninput = render;
     $('#bNew').onclick = () => this.newLabModal();
     $('#bAi').onclick = () => this.aiCreateModal();
-    $('#bExp').onclick = () => exp(pick());
-    $('#bPkt').onclick = () => expPkt(pick());
+    $('#bExp').onclick = () => this.exportLabModal(pick());
     $('#bDel').onclick = () => del(pick());
-    $('#bImport').onclick = () => {
-      const f = document.createElement('input'); f.type = 'file'; f.accept = '.json,.pkt,application/json,application/octet-stream';
-      f.onchange = async () => {
-        const file = f.files && f.files[0]; if (!file) return;
-        if (file.name.toLowerCase().endsWith('.pkt')) {
-          try {
-            const response = await fetch('/api/labs/import-pkt', {
-              method: 'POST', credentials: 'same-origin',
-              headers: { 'X-NexLab': '1', 'X-Filename': encodeURIComponent(file.name) }, body: file
-            });
-            const result = await response.json().catch(() => ({}));
-            if (response.status === 401) { this.showAuth(); return; }
-            if (!response.ok) return this.toast(result.error || `Impor .pkt gagal (${response.status})`, true);
-            (result.warnings || []).forEach(w => this.toast(w, true));
-            this.toast('Topologi Packet Tracer diimpor ke lab baru');
-            location.hash = '#/lab/' + result.id;
-          } catch (e) { this.toast('Server tidak dapat dihubungi saat mengimpor .pkt', true); }
-          return;
-        }
-        try {
-          const j = JSON.parse(await file.text());
-          const data = j.data || j;
-          const r = await this.api('POST', '/api/labs', { name: j.name || file.name.replace(/\..*$/, ''), description: j.description || '', data });
-          if (r) { this.toast('Lab diimpor'); location.hash = '#/lab/' + r.id; }
-        } catch (e) { this.toast('File bukan lab NexLab yang valid', true); }
-      };
-      f.click();
-    };
+    $('#bImport').onclick = () => this.importLabModal();
     await this.loadTemplates();
     load();
   },

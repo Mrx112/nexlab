@@ -573,6 +573,27 @@ def create_lab(req, name, desc, data, imported=False):
         rt.mark_dirty()
     if isinstance(data.get('map3d'), dict):
         rt.lab['map3d'] = data['map3d']
+    if isinstance(data.get('workbook'), dict):
+        rt.lab['workbook'] = ai.sanitize_workbook(data['workbook'])
+    if isinstance(data.get('timer'), dict):
+        rt.lab['timer'] = data['timer']
+    if isinstance(data.get('configsets'), dict):
+        sets = {}
+        for raw_name, config_set in list(data['configsets'].items())[:12]:
+            if not isinstance(config_set, dict) or not isinstance(config_set.get('nodes'), dict):
+                continue
+            set_name = re.sub(r'[^A-Za-z0-9 _\-]', '', str(raw_name))[:30].strip()
+            if not set_name:
+                continue
+            nodes = {str(nid): state for nid, state in config_set['nodes'].items()
+                     if str(nid).isdigit() and isinstance(state, dict)}
+            try:
+                saved = max(0.0, float(config_set.get('saved') or 0))
+            except (TypeError, ValueError):
+                saved = 0.0
+            sets[set_name] = {'saved': saved, 'nodes': nodes}
+        if sets:
+            rt.lab['configsets'] = sets
     # keep state/startup/power of template nodes
     for n in data.get('nodes', []):
         if int(n['id']) in rt.by_id:
@@ -596,6 +617,15 @@ async def lab_create(req):
         data = d['data']
         if not isinstance(data, dict) or not isinstance(data.get('nodes'), list):
             return jerr('File lab tidak valid')
+        if not isinstance(data.get('links', []), list):
+            return jerr('Daftar koneksi lab tidak valid')
+        if isinstance(data.get('timer'), dict):
+            try:
+                minutes = max(0, min(1440, int(float(data['timer'].get('minutes') or 0))))
+                started = max(0.0, float(data['timer'].get('started') or 0))
+            except (TypeError, ValueError):
+                return jerr('Data timer lab tidak valid')
+            data['timer'] = {'minutes': minutes, 'started': started}
     else:
         tpl = TEMPLATE_LABS.get(d.get('template') or 'blank', TEMPLATE_LABS['blank'])
         data = tpl[1]()
@@ -671,13 +701,38 @@ async def lab_delete(req):
     return web.json_response({'ok': True})
 
 
+def lab_export_data(data, options):
+    exported = copy.deepcopy(data)
+    if not options.get('topology', True):
+        exported['nodes'] = []
+        exported['links'] = []
+    if not options.get('configs', True):
+        for node in exported.get('nodes', []):
+            node.pop('state', None)
+            node.pop('startup', None)
+            node.pop('power', None)
+        exported.pop('configsets', None)
+    if not options.get('notes', True):
+        exported['notes'] = []
+    if not options.get('workbook', True):
+        exported.pop('workbook', None)
+    if not options.get('map3d', True):
+        exported.pop('map3d', None)
+    if not options.get('timer', True):
+        exported.pop('timer', None)
+    exported.pop('_packet_tracer', None)
+    return exported
+
+
 async def lab_export(req):
     lid = int(req.match_info['lid'])
     row = lab_access(req, lid)
     req.app['mgr'].flush()
     rt = req.app['mgr'].get(lid)
-    data = rt.export()
-    data.pop('_packet_tracer', None)
+    data = lab_export_data(rt.export(), {
+        key: req.query.get(key, '1') != '0'
+        for key in ('topology', 'configs', 'notes', 'workbook', 'map3d', 'timer')
+    })
     body = json.dumps({'nexlab': VERSION, 'name': row['name'], 'description': row['description'], 'data': data}, indent=1)
     fname = re.sub(r'[^A-Za-z0-9_\-]+', '_', row['name']) + '.nexlab.json'
     return web.Response(body=body, content_type='application/json',
