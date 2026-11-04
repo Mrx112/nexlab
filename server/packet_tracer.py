@@ -2,11 +2,10 @@
 import copy
 import json
 import re
-import secrets
 import xml.etree.ElementTree as ET
 
 from .pkt import decode_pkt, encode_pkt
-from .runtime import kind_of
+from .state import running_config
 from .state import new_state
 from .templates import PROP_DEFAULTS, TEMPLATES, node_ifaces
 
@@ -14,7 +13,7 @@ from .templates import PROP_DEFAULTS, TEMPLATES, node_ifaces
 _MODEL_TYPES = (
     (('2911', 'Router-PT'), 'router'),
     (('3650', '3560'), 'l3switch'),
-    (('2950', '2950T', 'Switch-PT'), 'switch'),
+    (('2960', '2950', '2950T', 'Switch-PT'), 'switch'),
     (('PC-PT',), 'pc'),
     (('Laptop-PT',), 'laptop'),
     (('Server-PT',), 'server'),
@@ -26,6 +25,42 @@ _MODEL_TYPES = (
     (('Smartphone-PT',), 'smartphone'),
     (('Tablet-PT',), 'tablet'),
 )
+
+_EXPORT_DEVICE_MODELS = {
+    'router': ('Router', '2911'),
+    'firewall': ('Router', '2911'),
+    'switch': ('Switch', '2960-24TT'),
+    'l3switch': ('Switch', '3650-24PS'),
+    'pc': ('PC', 'PC-PT'),
+    'laptop': ('Laptop', 'Laptop-PT'),
+    'server': ('Server', 'Server-PT'),
+    'printer': ('Printer', 'Printer-PT'),
+    'ap': ('AccessPoint', 'AccessPoint-PT'),
+    'cloud': ('Cloud', 'Cloud-PT'),
+    'hub': ('Hub', 'Hub-PT'),
+    'ipphone': ('IP Phone', 'IP Phone'),
+    'smartphone': ('Smartphone', 'Smartphone-PT'),
+    'tablet': ('Tablet', 'Tablet-PT'),
+}
+
+_EXPORT_PORTS = {
+    'router': {f'GigabitEthernet0/{index}' for index in range(3)},
+    'firewall': {f'GigabitEthernet0/{index}' for index in range(3)},
+    'switch': ({f'FastEthernet0/{index}' for index in range(1, 25)}
+               | {'GigabitEthernet0/1', 'GigabitEthernet0/2'}),
+    'l3switch': ({f'GigabitEthernet1/0/{index}' for index in range(1, 25)}
+                 | {f'GigabitEthernet1/1/{index}' for index in range(1, 5)}),
+    'pc': {'FastEthernet0'},
+    'laptop': {'FastEthernet0'},
+    'server': {'FastEthernet0'},
+    'printer': {'FastEthernet0'},
+    'ap': {'GigabitEthernet0'},
+    'cloud': {f'eth{index}' for index in range(8)},
+    'hub': {f'Port{index}' for index in range(8)},
+    'ipphone': {'FastEthernet0'},
+    'smartphone': set(),
+    'tablet': set(),
+}
 
 
 def _device_type(engine):
@@ -234,10 +269,135 @@ def _replace_text(parent, tag, value):
     return element
 
 
-def export_pkt(lab):
+def _packet_tracer_port(node, iface):
+    if node['type'] == 'cloud':
+        return re.sub(r'^eth(\d+)$', r'Ethernet\1', iface)
+    if node['type'] == 'hub':
+        return re.sub(r'^Port(\d+)$', r'Port \1', iface)
+    if node['type'] == 'ap' and iface == 'GigabitEthernet0':
+        return 'Port 0'
+    return iface
+
+
+def _export_new_pkt(lab, warnings):
+    root = ET.Element('PACKETTRACER5')
+    _replace_text(root, 'VERSION', '9.0.0.0810')
+    network = ET.SubElement(root, 'NETWORK')
+    devices = ET.SubElement(network, 'DEVICES')
+    links = ET.SubElement(network, 'LINKS')
+    ET.SubElement(network, 'SHAPETESTS')
+
+    nodes_by_id = {int(node['id']): node for node in lab.get('nodes', [])}
+    exported_nodes = {}
+    unsupported_types = set()
+    skipped_devices = 0
+    skipped_config = 0
+
+    for node in lab.get('nodes', []):
+        node_type = node.get('type')
+        model = _EXPORT_DEVICE_MODELS.get(node_type)
+        if model is None:
+            skipped_devices += 1
+            unsupported_types.add(str(node_type or 'unknown'))
+            continue
+
+        node_id = int(node['id'])
+        ref = f'save-ref-id:{node_id}'
+        exported_nodes[node_id] = (node, ref)
+        device = ET.SubElement(devices, 'DEVICE')
+        engine = ET.SubElement(device, 'ENGINE')
+        type_element = ET.SubElement(engine, 'TYPE', {'model': model[1]})
+        type_element.text = model[0]
+        _replace_text(engine, 'NAME', node.get('name') or f'{model[0]}{node_id}')
+        _replace_text(engine, 'POWER', 'true')
+        _replace_text(engine, 'SAVE_REF_ID', ref)
+        _replace_text(engine, 'SYS_NAME', node.get('name') or f'{model[0]}{node_id}')
+        coords = ET.SubElement(engine, 'COORD_SETTINGS')
+        _replace_text(coords, 'X_COORD', node.get('x', 0))
+        _replace_text(coords, 'Y_COORD', node.get('y', 0))
+
+        if node_type in ('router', 'firewall', 'switch', 'l3switch'):
+            config = ET.SubElement(engine, 'RUNNINGCONFIG')
+            state = node.get('state')
+            if isinstance(state, dict):
+                for line in running_config(node_type, state).splitlines():
+                    ET.SubElement(config, 'LINE').text = line
+            else:
+                skipped_config += 1
+        elif node_type in ('pc', 'laptop', 'server', 'printer', 'ipphone', 'smartphone', 'tablet'):
+            host_state = node.get('state') or node.get('host') or {}
+            if (
+                any(host_state.get(key) for key in ('ip', 'mask', 'gw', 'dns', 'wifi', 'services', 'scripts'))
+                or host_state.get('dhcp')
+            ):
+                skipped_config += 1
+        elif node_type in ('ap', 'cloud') and node.get('props'):
+            skipped_config += 1
+
+    skipped_links = 0
+    occupied_ports = set()
+    represented_firewalls = sum(1 for node in lab.get('nodes', []) if node.get('type') == 'firewall')
+    for link in lab.get('links', []):
+        try:
+            node_a, iface_a = int(link['a']['node']), str(link['a']['iface'])
+            node_b, iface_b = int(link['b']['node']), str(link['b']['iface'])
+        except (KeyError, TypeError, ValueError):
+            skipped_links += 1
+            continue
+        endpoints = ((node_a, iface_a), (node_b, iface_b))
+        if (
+            node_a == node_b
+            or any(node_id not in exported_nodes for node_id, _ in endpoints)
+            or any(iface not in _EXPORT_PORTS.get(nodes_by_id[node_id].get('type'), set())
+                   for node_id, iface in endpoints)
+            or any(endpoint in occupied_ports for endpoint in endpoints)
+        ):
+            skipped_links += 1
+            continue
+        occupied_ports.update(endpoints)
+
+        link_element = ET.SubElement(links, 'LINK')
+        ET.SubElement(link_element, 'TYPE').text = 'eFiber' if link.get('style') == 'fiber' else 'eCopper'
+        ET.SubElement(link_element, 'CABLE')
+        ET.SubElement(link_element, 'FROM').text = exported_nodes[node_a][1]
+        ET.SubElement(link_element, 'PORT').text = _packet_tracer_port(nodes_by_id[node_a], iface_a)
+        ET.SubElement(link_element, 'TO').text = exported_nodes[node_b][1]
+        ET.SubElement(link_element, 'PORT').text = _packet_tracer_port(nodes_by_id[node_b], iface_b)
+        ET.SubElement(link_element, 'TYPE').text = 'eStraightThrough'
+
+    if skipped_devices:
+        warnings.append(
+            f'{skipped_devices} perangkat tidak didukung dan tidak dimasukkan ke file .pkt '
+            f'({", ".join(sorted(unsupported_types))}).'
+        )
+    if skipped_links:
+        warnings.append(f'{skipped_links} koneksi tidak kompatibel dilewati saat konversi .pkt.')
+    if skipped_config:
+        warnings.append(
+            f'Konfigurasi atau layanan dari {skipped_config} perangkat akhir tidak ikut dikonversi; '
+            'konfigurasi IOS router/switch yang didukung tetap disertakan.'
+        )
+    if represented_firewalls:
+        warnings.append(
+            f'{represented_firewalls} firewall NexLab direpresentasikan sebagai router; fitur firewall khusus mungkin hilang.'
+        )
+    map3d = lab.get('map3d') or {}
+    has_map_content = any(map3d.get(key) for key in ('buildings', 'objects', 'cables', 'settings'))
+    if lab.get('notes') or lab.get('workbook') or has_map_content or lab.get('timer') or lab.get('configsets'):
+        warnings.append('Catatan, workbook, timer, config set, dan peta 3D NexLab tidak tersedia dalam format .pkt.')
+    if exported_nodes:
+        warnings.append(
+            'File .pkt baru dibuat dari perangkat dan koneksi yang kompatibel; periksa kembali hasilnya di Cisco Packet Tracer.'
+        )
+    return encode_pkt(ET.tostring(root, encoding='utf-8', xml_declaration=True))
+
+
+def export_pkt(lab, warnings=None):
     meta = lab.get('_packet_tracer')
     if not isinstance(meta, dict) or not meta.get('xml'):
-        raise ValueError('Untuk menyimpan sebagai .pkt, impor file Cisco Packet Tracer terlebih dahulu.')
+        if warnings is None:
+            warnings = []
+        return _export_new_pkt(lab, warnings)
     try:
         root = ET.fromstring(meta['xml'])
     except ET.ParseError as exc:
