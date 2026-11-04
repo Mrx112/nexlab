@@ -15,6 +15,23 @@ const App = {
       return d;
     } catch (e) { if (!quiet) this.toast('Server tidak dapat dihubungi', true); return null; }
   },
+  async download(url) {
+    try {
+      const response = await fetch(url, { credentials: 'same-origin' });
+      if (response.status === 401) { this.showAuth(); return; }
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        this.toast(result.error || `Unduhan gagal (${response.status})`, true);
+        return;
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || 'NexLab.pkt';
+      const href = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = href; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    } catch (e) { this.toast('Server tidak dapat dihubungi saat mengunduh file', true); }
+  },
   toast(msg, bad) {
     const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
     document.getElementById('toasts').appendChild(t);
@@ -281,6 +298,7 @@ const App = {
           <button class="btn sm ai" id="bAi">${UI.spark} Buat dengan Claude</button>
           <button class="btn sm" id="bImport">${UI.up} Impor</button>
           <button class="btn sm" id="bExp">${UI.down} Ekspor</button>
+          <button class="btn sm" id="bPkt">${UI.down} Ekspor .pkt</button>
           <button class="btn sm danger" id="bDel">${UI.trash} Hapus</button>
           <span class="grow"></span>
           <input class="input sm" id="fmq" placeholder="Cari lab…" aria-label="Cari lab">
@@ -303,6 +321,10 @@ const App = {
       if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
       ids.forEach((id, i) => setTimeout(() => { const a = document.createElement('a'); a.href = `/api/labs/${id}/export`; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); }, i * 400));
     };
+    const expPkt = ids => {
+      if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
+      ids.forEach((id, i) => setTimeout(() => this.download(`/api/labs/${id}/export-pkt`), i * 800));
+    };
     const preview = id => {
       cur = labs.find(l => l.id === id) || null;
       v.querySelectorAll('.fm-t tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.id === id));
@@ -312,9 +334,10 @@ const App = {
         <div class="pv-body"><h3>${esc(cur.name)}</h3>${cur.description ? `<p class="muted" style="margin:0 0 10px">${esc(cur.description)}</p>` : ''}
           <dl class="kv"><dt>Perangkat</dt><dd>${cur.nodes}</dd><dt>Kabel</dt><dd>${cur.links}</dd><dt>Menyala</dt><dd><span class="led ${cur.running ? 'on' : ''}"></span> ${cur.running}</dd>
             <dt>Diubah</dt><dd>${fmt(cur.updated)}</dd>${all ? `<dt>Pemilik</dt><dd>${esc(cur.owner)}</dd>` : ''}</dl>
-          <div class="pv-actions"><button class="btn primary" data-p="open">${UI.play} Buka lab</button><button class="btn" data-p="exp">${UI.down} Ekspor</button><span class="grow"></span><button class="btn danger" data-p="del">${UI.trash} Hapus</button></div></div>`;
+          <div class="pv-actions"><button class="btn primary" data-p="open">${UI.play} Buka lab</button><button class="btn" data-p="exp">${UI.down} Ekspor</button><button class="btn" data-p="pkt">${UI.down} Ekspor .pkt</button><span class="grow"></span><button class="btn danger" data-p="del">${UI.trash} Hapus</button></div></div>`;
       p.querySelector('[data-p=open]').onclick = () => { location.hash = '#/lab/' + cur.id; };
       p.querySelector('[data-p=exp]').onclick = () => exp([cur.id]);
+      p.querySelector('[data-p=pkt]').onclick = () => expPkt([cur.id]);
       p.querySelector('[data-p=del]').onclick = () => del([cur.id]);
     };
     const render = () => {
@@ -349,14 +372,31 @@ const App = {
     $('#bNew').onclick = () => this.newLabModal();
     $('#bAi').onclick = () => this.aiCreateModal();
     $('#bExp').onclick = () => exp(pick());
+    $('#bPkt').onclick = () => expPkt(pick());
     $('#bDel').onclick = () => del(pick());
     $('#bImport').onclick = () => {
-      const f = document.createElement('input'); f.type = 'file'; f.accept = '.json,application/json';
+      const f = document.createElement('input'); f.type = 'file'; f.accept = '.json,.pkt,application/json,application/octet-stream';
       f.onchange = async () => {
+        const file = f.files && f.files[0]; if (!file) return;
+        if (file.name.toLowerCase().endsWith('.pkt')) {
+          try {
+            const response = await fetch('/api/labs/import-pkt', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'X-NexLab': '1', 'X-Filename': encodeURIComponent(file.name) }, body: file
+            });
+            const result = await response.json().catch(() => ({}));
+            if (response.status === 401) { this.showAuth(); return; }
+            if (!response.ok) return this.toast(result.error || `Impor .pkt gagal (${response.status})`, true);
+            (result.warnings || []).forEach(w => this.toast(w, true));
+            this.toast('Topologi Packet Tracer diimpor ke lab baru');
+            location.hash = '#/lab/' + result.id;
+          } catch (e) { this.toast('Server tidak dapat dihubungi saat mengimpor .pkt', true); }
+          return;
+        }
         try {
-          const j = JSON.parse(await f.files[0].text());
+          const j = JSON.parse(await file.text());
           const data = j.data || j;
-          const r = await this.api('POST', '/api/labs', { name: j.name || f.files[0].name.replace(/\..*$/, ''), description: j.description || '', data });
+          const r = await this.api('POST', '/api/labs', { name: j.name || file.name.replace(/\..*$/, ''), description: j.description || '', data });
           if (r) { this.toast('Lab diimpor'); location.hash = '#/lab/' + r.id; }
         } catch (e) { this.toast('File bukan lab NexLab yang valid', true); }
       };

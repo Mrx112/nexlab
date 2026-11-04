@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 import uuid
 import zipfile
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from aiohttp import web, WSMsgType
 
@@ -28,13 +28,14 @@ from .state import running_config
 from .net import HOST, HUB
 from . import sysinfo
 from . import ai
+from . import packet_tracer
 
 BASE = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.8'
+VERSION = '1.4.9'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -559,24 +560,17 @@ async def labs_list(req):
     return web.json_response({'labs': out})
 
 
-async def lab_create(req):
-    d = await req.json()
-    name = str(d.get('name') or 'Lab baru').strip()[:60]
-    desc = str(d.get('description') or '')[:300]
-    if d.get('data'):
-        data = d['data']
-        if not isinstance(data, dict) or not isinstance(data.get('nodes'), list):
-            return jerr('File lab tidak valid')
-    else:
-        tpl = TEMPLATE_LABS.get(d.get('template') or 'blank', TEMPLATE_LABS['blank'])
-        data = tpl[1]()
+def create_lab(req, name, desc, data, imported=False):
     now = time.time()
     lid = req.app['db'].x('INSERT INTO labs(owner,name,description,data,created,updated) VALUES(?,?,?,?,?,?)',
                           (req['user']['id'], name, desc, json.dumps({'nodes': [], 'links': []}), now, now))
     rt = req.app['mgr'].get(lid)
     for n in data.get('nodes', []):
-        n.pop('power', None) if d.get('data') else None
+        n.pop('power', None) if imported else None
     rt.update_topology(data.get('nodes', []), data.get('links', []), data.get('notes', []))
+    if isinstance(data.get('_packet_tracer'), dict):
+        rt.lab['_packet_tracer'] = data['_packet_tracer']
+        rt.mark_dirty()
     if isinstance(data.get('map3d'), dict):
         rt.lab['map3d'] = data['map3d']
     # keep state/startup/power of template nodes
@@ -591,7 +585,32 @@ async def lab_create(req):
                 tgt['power'] = 'on'
                 rt.boot[tgt['id']] = time.time()
     req.app['mgr'].flush()
-    return web.json_response({'id': lid})
+    return lid
+
+
+async def lab_create(req):
+    d = await req.json()
+    name = str(d.get('name') or 'Lab baru').strip()[:60]
+    desc = str(d.get('description') or '')[:300]
+    if d.get('data'):
+        data = d['data']
+        if not isinstance(data, dict) or not isinstance(data.get('nodes'), list):
+            return jerr('File lab tidak valid')
+    else:
+        tpl = TEMPLATE_LABS.get(d.get('template') or 'blank', TEMPLATE_LABS['blank'])
+        data = tpl[1]()
+    return web.json_response({'id': create_lab(req, name, desc, data, imported=bool(d.get('data')))})
+
+
+async def lab_pkt_import(req):
+    raw = await req.read()
+    filename = os.path.basename(unquote(req.headers.get('X-Filename', 'Packet-Tracer.pkt')))
+    name = os.path.splitext(filename)[0][:60] or 'Lab Packet Tracer'
+    data, warnings = packet_tracer.import_pkt(raw)
+    if not data['nodes']:
+        return jerr('Tidak ada perangkat yang dapat diimpor dari file Packet Tracer.')
+    lid = create_lab(req, name, '', data, imported=True)
+    return web.json_response({'id': lid, 'warnings': warnings})
 
 
 async def lab_get(req):
@@ -599,6 +618,7 @@ async def lab_get(req):
     row = lab_access(req, lid)
     rt = req.app['mgr'].get(lid)
     lab = rt.export()
+    lab.pop('_packet_tracer', None)
     lab['configsets'] = [{'name': k, 'saved': v['saved'], 'nodes': len(v['nodes'])} for k, v in (lab.get('configsets') or {}).items()]
     for n in lab['nodes']:
         n.pop('startup', None)
@@ -657,10 +677,19 @@ async def lab_export(req):
     req.app['mgr'].flush()
     rt = req.app['mgr'].get(lid)
     data = rt.export()
+    data.pop('_packet_tracer', None)
     body = json.dumps({'nexlab': VERSION, 'name': row['name'], 'description': row['description'], 'data': data}, indent=1)
     fname = re.sub(r'[^A-Za-z0-9_\-]+', '_', row['name']) + '.nexlab.json'
     return web.Response(body=body, content_type='application/json',
                         headers={'Content-Disposition': f'attachment; filename="{fname}"'})
+
+
+async def lab_export_pkt(req):
+    lid = int(req.match_info['lid'])
+    row = lab_access(req, lid)
+    data = packet_tracer.export_pkt(req.app['mgr'].get(lid).export())
+    return web.Response(body=data, content_type='application/octet-stream',
+                        headers={'Content-Disposition': f'attachment; filename="{packet_tracer.filename_for(row["name"])}"'})
 
 
 async def lab_status(req):
@@ -1217,11 +1246,13 @@ def build_app(data_dir, port=8080):
     r.add_get('/api/templates', templates)
     r.add_get('/api/labs', labs_list)
     r.add_post('/api/labs', lab_create)
+    r.add_post('/api/labs/import-pkt', lab_pkt_import)
     r.add_get('/api/labs/{lid}', lab_get)
     r.add_post('/api/labs/{lid}/meta', lab_meta)
     r.add_put('/api/labs/{lid}/topology', lab_topology)
     r.add_delete('/api/labs/{lid}', lab_delete)
     r.add_get('/api/labs/{lid}/export', lab_export)
+    r.add_get('/api/labs/{lid}/export-pkt', lab_export_pkt)
     r.add_get('/api/labs/{lid}/status', lab_status)
     r.add_post('/api/labs/{lid}/power/{action:start|stop|wipe}', lab_power)
     r.add_post('/api/labs/{lid}/nodes/{nid}/socket/reset', lab_socket_reset)

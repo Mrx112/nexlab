@@ -448,6 +448,7 @@ class Editor {
       ['Wipe semua node', () => this.power('wipe'), '', false, 'wipe'],
       ['Console ke semua node', () => this.lab.nodes.filter(n => this.running(n.id) && this.tpl[n.type]?.kind !== 'cloud').forEach(n => Consoles.open(this.id, n)), '', false, 'term'],
       '-', ['Ekspor lab', () => { location.href = `/api/labs/${this.id}/export`; }, '', false, 'down'],
+      ['Simpan sebagai Cisco Packet Tracer (.pkt)', () => App.download(`/api/labs/${this.id}/export-pkt`), '', false, 'down'],
       ['Ekspor semua config (.txt)', () => { location.href = `/api/labs/${this.id}/configs`; }, '', false, 'file'],
       ['Timer lab', () => this.workbookPanel(true), '', false, 'clock'],
       ['Undo', () => this.undo(), 'Ctrl+Z', false, 'wipe'],
