@@ -33,6 +33,7 @@ jobs:
           $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path "dist\NexLab\NexLab.exe").Path)
           if (-not $icon) { throw "NexLab.exe does not contain an application icon." }
           if (-not (Test-Path "dist\NexLab\_internal\static\index.html")) { throw "Packaged static/index.html is missing." }
+          if (-not (Test-Path "dist\NexLab\_internal\static\data\packet-tracer-seed.pkt")) { throw "Packet Tracer export template is missing." }
           if (-not (Test-Path "dist\NexLab\_internal\installers\windows\install.ps1")) { throw "Windows installer script is missing." }
           if (-not (Test-Path "dist\NexLab\_internal\installers\windows\update.ps1")) { throw "Windows updater script is missing." }
       - name: Package release
@@ -71,6 +72,7 @@ jobs:
           test -x dist/NexLab.app/Contents/MacOS/nexlab-launcher
           test -x dist/NexLab.app/Contents/Resources/runtime/NexLab
           test -f dist/NexLab.app/Contents/Resources/runtime/_internal/static/index.html
+          test -f dist/NexLab.app/Contents/Resources/runtime/_internal/static/data/packet-tracer-seed.pkt
       - name: Package release
         run: tar -czf "NexLab-macOS-${{ matrix.arch }}.tar.gz" -C dist NexLab.app
       - uses: actions/upload-artifact@v4
@@ -97,6 +99,7 @@ jobs:
         run: |
           test -x dist/NexLab/NexLab
           test -f dist/NexLab/_internal/static/index.html
+          test -f dist/NexLab/_internal/static/data/packet-tracer-seed.pkt
       - name: Package release
         run: tar -czf NexLab-Linux-x64.tar.gz -C dist NexLab
       - uses: actions/upload-artifact@v4

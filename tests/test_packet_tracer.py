@@ -1,7 +1,8 @@
+import re
 import unittest
 import xml.etree.ElementTree as ET
 
-from server.packet_tracer import export_pkt, import_pkt
+from server.packet_tracer import _packet_tracer_seed, export_pkt, import_pkt
 from server.pkt import decode_pkt, encode_pkt
 
 
@@ -32,6 +33,33 @@ _XML = b'''<?xml version="1.0" encoding="utf-8"?>
 
 
 class PacketTracerCodecTests(unittest.TestCase):
+    def test_seed_contains_sanitized_device_and_workspace_templates(self):
+        root = _packet_tracer_seed()
+        models = {
+            device.find('ENGINE/TYPE').get('model')
+            for device in root.findall('./NETWORK/DEVICES/DEVICE')
+        }
+        self.assertEqual(models, {
+            '2911', '2950T-24', 'PC-PT', 'Server-PT', 'Printer-PT',
+            'AccessPoint-PT', 'Cloud-PT',
+        })
+        self.assertIsNotNone(root.find('PHYSICALWORKSPACE'))
+        self.assertIsNotNone(root.find('./NETWORK/LINKS/LINK/CABLE'))
+        self.assertFalse(root.findall('.//FILE_PATH'))
+        self.assertFalse(root.findall('.//SCRIPT_MODULES'))
+        self.assertFalse(root.findall('.//USER_APP'))
+        self.assertFalse(any(
+            (element.text or '').strip()
+            for element in root.findall('.//OPTIONS/ANSWER_TREE_CHECK_BOX')
+        ))
+        physical_ids = {
+            (element.text or '').strip('{}')
+            for element in root.findall('.//PHYSICALWORKSPACE//UUID_STR')
+        }
+        for device in root.findall('./NETWORK/DEVICES/DEVICE'):
+            physical_path = device.findtext('WORKSPACE/PHYSICAL') or ''
+            self.assertTrue(set(re.findall(r'\{([^}]+)\}', physical_path)) <= physical_ids)
+
     def test_round_trip_and_reject_tampering(self):
         packet = encode_pkt(_XML)
         self.assertEqual(decode_pkt(packet), _XML)
@@ -72,25 +100,48 @@ class PacketTracerCodecTests(unittest.TestCase):
         data, _ = import_pkt(encode_pkt(_XML))
         data.pop('_packet_tracer')
         data['nodes'][1]['x'] = 320
+        data['nodes'][1]['state'].update(
+            ip='10.0.0.2', mask='255.255.255.0', gw='10.0.0.1', dns='1.1.1.1'
+        )
         data['links'][0]['style'] = 'fiber'
         warnings = []
 
         packet = export_pkt(data, warnings)
         converted = decode_pkt(packet)
         root = ET.fromstring(converted)
+        devices = root.findall('./NETWORK/DEVICES/DEVICE')
+        self.assertEqual(len(devices), 2)
         self.assertEqual(root.findtext('./NETWORK/DEVICES/DEVICE/ENGINE/NAME'), 'R1')
         config_lines = [line.text for line in root.findall('./NETWORK/DEVICES/DEVICE/ENGINE/RUNNINGCONFIG/LINE')]
         self.assertIn('hostname R1', config_lines)
         self.assertEqual(float(root.findtext('./NETWORK/DEVICES/DEVICE/ENGINE/COORD_SETTINGS/X_COORD')), 120)
         link = root.find('./NETWORK/LINKS/LINK')
-        self.assertEqual(link.findtext('TYPE'), 'eFiber')
-        self.assertEqual(link.findtext('FROM'), 'save-ref-id:1')
-        self.assertEqual(link.findtext('TO'), 'save-ref-id:2')
-        self.assertTrue(any('dibuat dari perangkat' in warning for warning in warnings))
+        cable = link.find('CABLE')
+        self.assertEqual(link.findtext('TYPE'), 'eCopper')
+        self.assertEqual(cable.findtext('FROM'), devices[0].findtext('ENGINE/SAVE_REF_ID'))
+        self.assertEqual(cable.findtext('TO'), devices[1].findtext('ENGINE/SAVE_REF_ID'))
+        self.assertEqual(cable.findall('PORT')[0].text, 'GigabitEthernet0/0')
+        self.assertEqual(cable.findall('PORT')[1].text, 'FastEthernet0')
+        endpoint_port = devices[1].find('./ENGINE/MODULE//PORT')
+        self.assertEqual(endpoint_port.findtext('IP'), '10.0.0.2')
+        self.assertEqual(endpoint_port.findtext('SUBNET'), '255.255.255.0')
+        self.assertTrue(any('fiber dikonversi' in warning for warning in warnings))
 
         imported, _ = import_pkt(packet)
         self.assertEqual([node['type'] for node in imported['nodes']], ['router', 'pc'])
         self.assertEqual(len(imported['links']), 1)
+        self.assertEqual(imported['nodes'][1]['state']['ip'], '10.0.0.2')
+
+    def test_native_router_exports_up_connected_port(self):
+        data, _ = import_pkt(encode_pkt(_XML))
+        data.pop('_packet_tracer')
+        warnings = []
+
+        root = ET.fromstring(decode_pkt(export_pkt(data, warnings)))
+        config = [line.text for line in root.findall('./NETWORK/DEVICES/DEVICE/ENGINE/RUNNINGCONFIG/LINE')]
+        interface_start = config.index('interface GigabitEthernet0/0')
+        interface_config = config[interface_start:config.index('!', interface_start)]
+        self.assertIn(' no shutdown', interface_config)
 
     def test_native_export_warns_when_skipping_unsupported_devices_and_links(self):
         lab = {

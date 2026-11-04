@@ -1,12 +1,12 @@
 """Translate the supported Packet Tracer logical-topology subset."""
 import copy
-import json
+from functools import lru_cache
+from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 
 from .pkt import decode_pkt, encode_pkt
-from .state import running_config
-from .state import new_state
+from .state import mac_for, new_state, running_config, valid_ip, valid_mask
 from .templates import PROP_DEFAULTS, TEMPLATES, node_ifaces
 
 
@@ -26,21 +26,17 @@ _MODEL_TYPES = (
     (('Tablet-PT',), 'tablet'),
 )
 
-_EXPORT_DEVICE_MODELS = {
-    'router': ('Router', '2911'),
-    'firewall': ('Router', '2911'),
-    'switch': ('Switch', '2960-24TT'),
-    'l3switch': ('Switch', '3650-24PS'),
-    'pc': ('PC', 'PC-PT'),
-    'laptop': ('Laptop', 'Laptop-PT'),
-    'server': ('Server', 'Server-PT'),
-    'printer': ('Printer', 'Printer-PT'),
-    'ap': ('AccessPoint', 'AccessPoint-PT'),
-    'cloud': ('Cloud', 'Cloud-PT'),
-    'hub': ('Hub', 'Hub-PT'),
-    'ipphone': ('IP Phone', 'IP Phone'),
-    'smartphone': ('Smartphone', 'Smartphone-PT'),
-    'tablet': ('Tablet', 'Tablet-PT'),
+_EXPORT_TEMPLATE_MODELS = {
+    'router': '2911',
+    'firewall': '2911',
+    'switch': '2950T-24',
+    'l3switch': '2950T-24',
+    'pc': 'PC-PT',
+    'laptop': 'PC-PT',
+    'server': 'Server-PT',
+    'printer': 'Printer-PT',
+    'ap': 'AccessPoint-PT',
+    'cloud': 'Cloud-PT',
 }
 
 _EXPORT_PORTS = {
@@ -49,17 +45,23 @@ _EXPORT_PORTS = {
     'switch': ({f'FastEthernet0/{index}' for index in range(1, 25)}
                | {'GigabitEthernet0/1', 'GigabitEthernet0/2'}),
     'l3switch': ({f'GigabitEthernet1/0/{index}' for index in range(1, 25)}
-                 | {f'GigabitEthernet1/1/{index}' for index in range(1, 5)}),
+                 | {'GigabitEthernet1/1/1', 'GigabitEthernet1/1/2'}),
     'pc': {'FastEthernet0'},
     'laptop': {'FastEthernet0'},
     'server': {'FastEthernet0'},
     'printer': {'FastEthernet0'},
     'ap': {'GigabitEthernet0'},
-    'cloud': {f'eth{index}' for index in range(8)},
-    'hub': {f'Port{index}' for index in range(8)},
-    'ipphone': {'FastEthernet0'},
-    'smartphone': set(),
-    'tablet': set(),
+    'cloud': {'eth0'},
+}
+
+_EXPORT_MODEL_PORTS = {
+    '2911': _EXPORT_PORTS['router'],
+    '2950T-24': _EXPORT_PORTS['switch'],
+    'PC-PT': _EXPORT_PORTS['pc'],
+    'Server-PT': _EXPORT_PORTS['server'],
+    'Printer-PT': _EXPORT_PORTS['printer'],
+    'AccessPoint-PT': {'Port 0'},
+    'Cloud-PT': {'Ethernet6'},
 }
 
 
@@ -139,6 +141,20 @@ def _parse_ios_config(node_type, name, text):
     return state
 
 
+def _parse_host_config(engine, node_type, name):
+    state = new_state(node_type, name, node_ifaces(node_type, PROP_DEFAULTS.get(node_type, {})))
+    port = next(iter(engine.findall('./MODULE//PORT')), None)
+    if port is not None:
+        ip = _child_text(port, 'IP')
+        mask = _child_text(port, 'SUBNET')
+        if valid_ip(ip) and valid_mask(mask):
+            state.update(ip=ip, mask=mask)
+        state['gw'] = _child_text(port, 'PORT_GATEWAY') or _child_text(engine, 'GATEWAY')
+        state['dns'] = _child_text(port, 'PORT_DNS') or _child_text(engine, 'DNS_CLIENT/SERVER_IP')
+        state['dhcp'] = _child_text(port, 'PORT_DHCP_ENABLE').lower() == 'true'
+    return state
+
+
 def _packet_device_rows(root):
     rows = []
     ref_to_node = {}
@@ -168,6 +184,8 @@ def _packet_device_rows(root):
                     node[field] = 0
         cfg = '\n'.join(x.text or '' for x in engine.findall('./RUNNINGCONFIG/LINE'))
         state = _parse_ios_config(node_type, name, cfg)
+        if state is None and node_type in ('pc', 'laptop', 'server', 'printer'):
+            state = _parse_host_config(engine, node_type, name)
         if state is not None:
             node['state'] = state
         ref = _child_text(engine, 'SAVE_REF_ID')
@@ -269,74 +287,243 @@ def _replace_text(parent, tag, value):
     return element
 
 
-def _packet_tracer_port(node, iface):
-    if node['type'] == 'cloud':
-        return re.sub(r'^eth(\d+)$', r'Ethernet\1', iface)
-    if node['type'] == 'hub':
-        return re.sub(r'^Port(\d+)$', r'Port \1', iface)
-    if node['type'] == 'ap' and iface == 'GigabitEthernet0':
+@lru_cache(maxsize=1)
+def _packet_tracer_seed():
+    path = Path(__file__).resolve().parent.parent / 'static' / 'data' / 'packet-tracer-seed.pkt'
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f'Template perangkat Cisco Packet Tracer tidak dapat dibaca: {exc}') from exc
+    try:
+        root = ET.fromstring(decode_pkt(data))
+    except (ValueError, ET.ParseError) as exc:
+        raise ValueError(f'Template perangkat Cisco Packet Tracer tidak valid: {exc}') from exc
+    if root.tag != 'PACKETTRACER5':
+        raise ValueError('Template perangkat bukan file Cisco Packet Tracer yang valid.')
+    return root
+
+
+def _packet_tracer_port(node_type, iface):
+    if node_type == 'l3switch':
+        match = re.fullmatch(r'GigabitEthernet1/0/(\d+)', iface)
+        if match:
+            return f'FastEthernet0/{match.group(1)}'
+        match = re.fullmatch(r'GigabitEthernet1/1/([12])', iface)
+        if match:
+            return f'GigabitEthernet0/{match.group(1)}'
+    if node_type == 'ap' and iface == 'GigabitEthernet0':
         return 'Port 0'
+    if node_type == 'cloud' and iface == 'eth0':
+        return 'Ethernet6'
     return iface
 
 
-def _export_new_pkt(lab, warnings):
-    root = ET.Element('PACKETTRACER5')
-    _replace_text(root, 'VERSION', '9.0.0.0810')
-    network = ET.SubElement(root, 'NETWORK')
-    devices = ET.SubElement(network, 'DEVICES')
-    links = ET.SubElement(network, 'LINKS')
-    ET.SubElement(network, 'SHAPETESTS')
+def _set_config(engine, tag, lines):
+    config = engine.find(tag)
+    if config is None:
+        config = ET.SubElement(engine, tag)
+    for child in list(config):
+        config.remove(child)
+    for line in lines:
+        ET.SubElement(config, 'LINE').text = line
 
-    nodes_by_id = {int(node['id']): node for node in lab.get('nodes', [])}
+
+def _packet_ios_config(node, connected_ifaces, warnings):
+    source_type = node.get('type')
+    output_type = 'switch' if source_type == 'l3switch' else 'router' if source_type == 'firewall' else source_type
+    source_state = node.get('state')
+    if not isinstance(source_state, dict):
+        source_state = new_state(source_type, node.get('name', ''), node.get('ifaces') or [])
+    state = copy.deepcopy(source_state)
+    state['hostname'] = node.get('name') or state.get('hostname') or 'NexLab'
+    if source_type in ('firewall',):
+        output_ports = _EXPORT_PORTS['router']
+    elif source_type == 'l3switch':
+        output_ports = _EXPORT_PORTS['switch']
+    else:
+        output_ports = _EXPORT_PORTS.get(source_type, set())
+
+    translated = {}
+    omitted_interfaces = False
+    for iface, details in state.get('ifaces', {}).items():
+        target_iface = _packet_tracer_port(source_type, iface)
+        if target_iface not in output_ports and not (
+            output_type == 'router' and any(target_iface.startswith(f'{port}.') for port in output_ports)
+        ):
+            if details.get('ip') or details.get('mode') == 'routed' or iface in connected_ifaces:
+                omitted_interfaces = True
+            continue
+        translated_details = copy.deepcopy(details)
+        if source_type == 'l3switch' and (
+            translated_details.get('mode') == 'routed' or translated_details.get('ip')
+        ):
+            translated_details.pop('ip', None)
+            translated_details.pop('mask', None)
+            translated_details['mode'] = 'access'
+            translated_details['vlan'] = translated_details.get('vlan') or 1
+            omitted_interfaces = True
+        if iface in connected_ifaces:
+            translated_details['shutdown'] = False
+        translated[target_iface] = translated_details
+    state['ifaces'] = translated
+
+    if source_type == 'l3switch':
+        state.update(ip_routing=False, routes=[], ospf=None, rip=None, dhcp_pools={}, dhcp_excluded=[])
+
+    state['enable_secret'] = None
+    state['enable_password'] = None
+    state['users'] = {}
+    for line_config in state.get('lines', {}).values():
+        line_config['password'] = None
+        line_config['login'] = False
+
+    if omitted_interfaces:
+        warnings.append(
+            f'{node.get("name", "Perangkat")} memiliki antarmuka/konfigurasi yang tidak ada pada model Packet Tracer hasil konversi.'
+        )
+    if source_type == 'l3switch':
+        warnings.append(
+            f'{node.get("name", "Switch L3")} dikonversi menjadi switch Layer 2; routing antarsubnet tidak ikut dikonversi.'
+        )
+    lines = running_config(output_type, state).splitlines()
+    if output_type == 'router':
+        for iface in connected_ifaces:
+            heading = f'interface {_packet_tracer_port(source_type, iface)}'
+            try:
+                start = lines.index(heading)
+                end = lines.index('!', start)
+            except ValueError:
+                continue
+            if ' no shutdown' not in lines[start:end]:
+                lines.insert(end, ' no shutdown')
+    return lines
+
+
+def _packet_host_config(engine, node, warnings):
+    host_state = node.get('state') or node.get('host') or {}
+    module_ports = engine.findall('./MODULE//PORT')
+    port = next((candidate for candidate in module_ports
+                 if (candidate.findtext('TYPE') or '').startswith('eCopper')), None)
+    if port is None:
+        warnings.append(f'Antarmuka kabel {node.get("name", "perangkat")} tidak ditemukan; alamat IP dilewati.')
+        return
+
+    ip = str(host_state.get('ip') or '')
+    mask = str(host_state.get('mask') or '')
+    if ip and (not valid_ip(ip) or not valid_mask(mask)):
+        warnings.append(f'Alamat IP/mask {node.get("name", "perangkat")} tidak valid dan tidak dikonversi.')
+        ip = mask = ''
+    for tag, value in (
+        ('IP', ip), ('SUBNET', mask), ('PORT_GATEWAY', host_state.get('gw') or ''),
+        ('PORT_DNS', host_state.get('dns') or ''),
+        ('PORT_DHCP_ENABLE', 'true' if host_state.get('dhcp') else 'false'),
+    ):
+        _replace_text(port, tag, value)
+    _replace_text(engine, 'GATEWAY', host_state.get('gw') or '')
+    dns_client = engine.find('DNS_CLIENT')
+    if dns_client is not None:
+        _replace_text(dns_client, 'SERVER_IP', host_state.get('dns') or '')
+
+    for index, candidate in enumerate(module_ports):
+        address = mac_for('pkt', node.get('id'), index).upper()
+        _replace_text(candidate, 'MACADDRESS', address)
+        _replace_text(candidate, 'BIA', address)
+
+    if node.get('type') == 'laptop':
+        warnings.append(
+            f'{node.get("name", "Laptop")} ditampilkan sebagai PC berkabel; konfigurasi Wi-Fi tidak ikut dikonversi.'
+        )
+    services = host_state.get('services') or {}
+    if node.get('type') == 'server' and any(
+        (services.get(key) or {}).get('enabled') for key in ('dhcp', 'dns', 'http')
+    ):
+        warnings.append(
+            f'Layanan DHCP/DNS/HTTP NexLab pada {node.get("name", "server")} tidak dikonversi; hanya IP dan gateway yang disalin.'
+        )
+    if not ip and not host_state.get('dhcp'):
+        warnings.append(
+            f'{node.get("name", "Perangkat")} belum memiliki IP statis atau DHCP; atur IP di Packet Tracer agar dapat ping.'
+        )
+
+
+def _trim_physical_workspace(root, devices):
+    physical = root.find('PHYSICALWORKSPACE')
+    if physical is None:
+        raise ValueError('Template Packet Tracer tidak memiliki PHYSICALWORKSPACE.')
+    used_leaf_ids = set()
+    for device in devices:
+        workspace = device.find('WORKSPACE')
+        path = _child_text(workspace, 'PHYSICAL') if workspace is not None else ''
+        if path:
+            used_leaf_ids.add(path.split(',')[-1].strip().strip('{}'))
+    for node in list(physical.iter('NODE')):
+        if node.findtext('TYPE') != '6' or node.findtext('UUID_STR', '').strip('{}') in used_leaf_ids:
+            continue
+        for parent in physical.iter():
+            children = parent.find('CHILDREN')
+            if children is not None and node in list(children):
+                children.remove(node)
+                break
+
+
+def _export_new_pkt(lab, warnings):
+    root = copy.deepcopy(_packet_tracer_seed())
+    network = root.find('NETWORK')
+    device_container = network.find('DEVICES') if network is not None else None
+    link_container = network.find('LINKS') if network is not None else None
+    if device_container is None or link_container is None or not link_container.findall('LINK'):
+        raise ValueError('Template Packet Tracer tidak memiliki struktur perangkat/kabel yang diperlukan.')
+
+    templates = {}
+    for device in device_container.findall('DEVICE'):
+        engine = device.find('ENGINE')
+        type_element = engine.find('TYPE') if engine is not None else None
+        model = type_element.get('model') if type_element is not None else None
+        if model:
+            templates[model] = device
+    link_template = link_container.find('LINK')
+    nodes = lab.get('nodes', [])
+    nodes_by_id = {int(node['id']): node for node in nodes}
     exported_nodes = {}
     unsupported_types = set()
     skipped_devices = 0
-    skipped_config = 0
-
-    for node in lab.get('nodes', []):
+    device_container.clear()
+    for index, node in enumerate(nodes):
         node_type = node.get('type')
-        model = _EXPORT_DEVICE_MODELS.get(node_type)
-        if model is None:
+        model = _EXPORT_TEMPLATE_MODELS.get(node_type)
+        template = templates.get(model)
+        if template is None:
             skipped_devices += 1
             unsupported_types.add(str(node_type or 'unknown'))
             continue
-
-        node_id = int(node['id'])
-        ref = f'save-ref-id:{node_id}'
-        exported_nodes[node_id] = (node, ref)
-        device = ET.SubElement(devices, 'DEVICE')
-        engine = ET.SubElement(device, 'ENGINE')
-        type_element = ET.SubElement(engine, 'TYPE', {'model': model[1]})
-        type_element.text = model[0]
-        _replace_text(engine, 'NAME', node.get('name') or f'{model[0]}{node_id}')
+        device = copy.deepcopy(template)
+        engine = device.find('ENGINE')
+        name = node.get('name') or f'{node_type}{node["id"]}'
+        _replace_text(engine, 'NAME', name)
+        _replace_text(engine, 'SYS_NAME', name)
         _replace_text(engine, 'POWER', 'true')
-        _replace_text(engine, 'SAVE_REF_ID', ref)
-        _replace_text(engine, 'SYS_NAME', node.get('name') or f'{model[0]}{node_id}')
-        coords = ET.SubElement(engine, 'COORD_SETTINGS')
-        _replace_text(coords, 'X_COORD', node.get('x', 0))
-        _replace_text(coords, 'Y_COORD', node.get('y', 0))
+        _replace_text(engine, 'SAVE_REF_ID', f'save-ref-id:{10000 + index}')
+        coords = engine.find('COORD_SETTINGS')
+        if coords is not None:
+            _replace_text(coords, 'X_COORD', node.get('x', 0))
+            _replace_text(coords, 'Y_COORD', node.get('y', 0))
+        workspace = device.find('WORKSPACE')
+        logical = workspace.find('LOGICAL') if workspace is not None else None
+        if logical is not None:
+            _replace_text(logical, 'X', node.get('x', 0))
+            _replace_text(logical, 'Y', node.get('y', 0))
+        for port_index, port in enumerate(engine.findall('./MODULE//PORT')):
+            address = mac_for('pkt', node.get('id'), port_index).upper()
+            _replace_text(port, 'MACADDRESS', address)
+            _replace_text(port, 'BIA', address)
+        device_container.append(device)
+        exported_nodes[int(node['id'])] = (node, device)
 
-        if node_type in ('router', 'firewall', 'switch', 'l3switch'):
-            config = ET.SubElement(engine, 'RUNNINGCONFIG')
-            state = node.get('state')
-            if isinstance(state, dict):
-                for line in running_config(node_type, state).splitlines():
-                    ET.SubElement(config, 'LINE').text = line
-            else:
-                skipped_config += 1
-        elif node_type in ('pc', 'laptop', 'server', 'printer', 'ipphone', 'smartphone', 'tablet'):
-            host_state = node.get('state') or node.get('host') or {}
-            if (
-                any(host_state.get(key) for key in ('ip', 'mask', 'gw', 'dns', 'wifi', 'services', 'scripts'))
-                or host_state.get('dhcp')
-            ):
-                skipped_config += 1
-        elif node_type in ('ap', 'cloud') and node.get('props'):
-            skipped_config += 1
-
-    skipped_links = 0
+    connected_ifaces = {}
     occupied_ports = set()
-    represented_firewalls = sum(1 for node in lab.get('nodes', []) if node.get('type') == 'firewall')
+    skipped_links = 0
+    changed_fiber_links = 0
+    converted_links = []
     for link in lab.get('links', []):
         try:
             node_a, iface_a = int(link['a']['node']), str(link['a']['iface'])
@@ -354,40 +541,78 @@ def _export_new_pkt(lab, warnings):
         ):
             skipped_links += 1
             continue
+        mapped = tuple(
+            (node_id, _packet_tracer_port(nodes_by_id[node_id]['type'], iface))
+            for node_id, iface in endpoints
+        )
+        if any(
+            mapped_iface not in _EXPORT_MODEL_PORTS.get(_EXPORT_TEMPLATE_MODELS[nodes_by_id[node_id]['type']], set())
+            for node_id, mapped_iface in mapped
+        ):
+            skipped_links += 1
+            continue
         occupied_ports.update(endpoints)
+        for node_id, iface in endpoints:
+            connected_ifaces.setdefault(node_id, set()).add(iface)
+        converted_links.append((link, endpoints, mapped))
+        if link.get('style') == 'fiber':
+            changed_fiber_links += 1
 
-        link_element = ET.SubElement(links, 'LINK')
-        ET.SubElement(link_element, 'TYPE').text = 'eFiber' if link.get('style') == 'fiber' else 'eCopper'
-        ET.SubElement(link_element, 'CABLE')
-        ET.SubElement(link_element, 'FROM').text = exported_nodes[node_a][1]
-        ET.SubElement(link_element, 'PORT').text = _packet_tracer_port(nodes_by_id[node_a], iface_a)
-        ET.SubElement(link_element, 'TO').text = exported_nodes[node_b][1]
-        ET.SubElement(link_element, 'PORT').text = _packet_tracer_port(nodes_by_id[node_b], iface_b)
-        ET.SubElement(link_element, 'TYPE').text = 'eStraightThrough'
+    for node_id, (node, device) in exported_nodes.items():
+        node_type = node.get('type')
+        engine = device.find('ENGINE')
+        if node_type in ('router', 'firewall', 'switch', 'l3switch'):
+            lines = _packet_ios_config(node, connected_ifaces.get(node_id, set()), warnings)
+            _set_config(engine, 'RUNNINGCONFIG', lines)
+            _set_config(engine, 'STARTUPCONFIG', lines)
+        elif node_type in ('pc', 'laptop', 'server', 'printer'):
+            _packet_host_config(engine, node, warnings)
 
+    link_container.clear()
+    for source_link, endpoints, mapped in converted_links:
+        link_element = copy.deepcopy(link_template)
+        cable = _link_connection(link_element)
+        cable_ports = cable.findall('PORT')
+        if cable.find('FROM') is None or cable.find('TO') is None or len(cable_ports) < 2:
+            raise ValueError('Template kabel Packet Tracer tidak memiliki FROM/TO/PORT yang diperlukan.')
+        ref_a = exported_nodes[endpoints[0][0]][1].findtext('ENGINE/SAVE_REF_ID')
+        ref_b = exported_nodes[endpoints[1][0]][1].findtext('ENGINE/SAVE_REF_ID')
+        _replace_text(cable, 'FROM', ref_a)
+        _replace_text(cable, 'TO', ref_b)
+        cable_ports[0].text = mapped[0][1]
+        cable_ports[1].text = mapped[1][1]
+        for tag in ('FROM_DEVICE_MEM_ADDR', 'TO_DEVICE_MEM_ADDR', 'FROM_PORT_MEM_ADDR', 'TO_PORT_MEM_ADDR'):
+            _replace_text(cable, tag, '1')
+        _replace_text(link_element, 'TYPE', 'eCopper')
+        _replace_text(cable, 'TYPE', 'eStraightThrough')
+        link_container.append(link_element)
+
+    devices = device_container.findall('DEVICE')
+    _trim_physical_workspace(root, devices)
     if skipped_devices:
         warnings.append(
-            f'{skipped_devices} perangkat tidak didukung dan tidak dimasukkan ke file .pkt '
+            f'{skipped_devices} perangkat tidak didukung dan tidak dimasukkan ke .pkt '
             f'({", ".join(sorted(unsupported_types))}).'
         )
     if skipped_links:
         warnings.append(f'{skipped_links} koneksi tidak kompatibel dilewati saat konversi .pkt.')
-    if skipped_config:
+    if changed_fiber_links:
         warnings.append(
-            f'Konfigurasi atau layanan dari {skipped_config} perangkat akhir tidak ikut dikonversi; '
-            'konfigurasi IOS router/switch yang didukung tetap disertakan.'
+            f'{changed_fiber_links} koneksi fiber dikonversi menjadi kabel copper karena model perangkat hasil ekspor memakai port copper.'
         )
-    if represented_firewalls:
-        warnings.append(
-            f'{represented_firewalls} firewall NexLab direpresentasikan sebagai router; fitur firewall khusus mungkin hilang.'
-        )
-    map3d = lab.get('map3d') or {}
-    has_map_content = any(map3d.get(key) for key in ('buildings', 'objects', 'cables', 'settings'))
-    if lab.get('notes') or lab.get('workbook') or has_map_content or lab.get('timer') or lab.get('configsets'):
+    if any(node.get('type') == 'firewall' for node in nodes):
+        warnings.append('Firewall NexLab direpresentasikan sebagai router; aturan firewall khusus mungkin tidak ikut dikonversi.')
+    if any(node.get('type') == 'ap' for node in nodes):
+        warnings.append('Perangkat Wi-Fi dikonversi sebagai access point kabel; SSID dan keamanan Wi-Fi perlu diatur ulang di Packet Tracer.')
+    if any(node.get('type') == 'cloud' for node in nodes):
+        warnings.append('Cloud NexLab dikonversi sebagai Cloud-PT; mode cloud NexLab tidak ikut dikonversi.')
+    if any(node.get('type') == 'laptop' for node in nodes):
+        warnings.append('Laptop NexLab dikonversi sebagai PC berkabel; fitur nirkabel tidak ikut dikonversi.')
+    if lab.get('notes') or lab.get('workbook') or lab.get('map3d') or lab.get('timer') or lab.get('configsets'):
         warnings.append('Catatan, workbook, timer, config set, dan peta 3D NexLab tidak tersedia dalam format .pkt.')
     if exported_nodes:
         warnings.append(
-            'File .pkt baru dibuat dari perangkat dan koneksi yang kompatibel; periksa kembali hasilnya di Cisco Packet Tracer.'
+            'Topologi dan konfigurasi IP/IOS yang kompatibel telah dikonversi. Uji ping di Packet Tracer; IP harus satu subnet atau memiliki gateway/rute yang sesuai.'
         )
     return encode_pkt(ET.tostring(root, encoding='utf-8', xml_declaration=True))
 
