@@ -28,7 +28,7 @@ Pengguna akhir memakai rilis aplikasi dan tidak memerlukan akses repository atau
 - Perubahan kabel QEMU saat VM berjalan otomatis menyambungkan ulang NIC socket UDP lewat QMP; admin juga dapat memakai **Hard Reset Link Socket** dari menu node jika perlu.
 - Console HTML5 (xterm.js) di jendela mengambang, bisa banyak sekaligus atau dibuka di tab baru.
 - Panel inspektor: nyala/mati/wipe, IP PC lewat GUI (static/DHCP, seperti tab Desktop Packet Tracer), layanan DHCP & DNS di Server, uji ping cepat dengan animasi paket, lihat running/startup-config.
-- Ekspor/impor lab (`.nexlab.json`) dan impor file Cisco Packet Tracer `.pkt`; lab hasil impor dapat disimpan kembali sebagai `.pkt` dengan perangkat/koneksi Packet Tracer asli yang tidak didukung tetap dipertahankan. Ekspor `.pkt` mendukung perubahan nama, posisi, dan penghapusan perangkat/koneksi yang sudah dipetakan; penambahan perangkat, perubahan konfigurasi IOS, serta penambahan atau penyambungan ulang koneksi belum didukung.
+- Ekspor lab menyediakan format NexLab JSON (`.nexlab.json`), Cisco Packet Tracer (`.pkt`), dan konfigurasi perangkat (`.txt`). Saat ekspor/impor NexLab JSON, topologi, konfigurasi, catatan, workbook, peta 3D, dan timer dapat dipilih satu per satu. File Cisco Packet Tracer juga dapat diimpor; ekspor `.pkt` mempertahankan perangkat/koneksi Packet Tracer asli yang tidak didukung NexLab. Perubahan nama, posisi, dan penghapusan perangkat/koneksi yang dipetakan didukung; perubahan konfigurasi IOS, penambahan perangkat, serta penambahan atau penyambungan ulang koneksi belum didukung.
 
 **Perangkat simulasi (CLI ala Cisco IOS)**
 | Perangkat | Kemampuan |
