@@ -24,6 +24,8 @@ const App = {
         this.toast(result.error || `Unduhan gagal (${response.status})`, true);
         return;
       }
+      const warnings = response.headers.get('X-NexLab-Warnings');
+      if (warnings) JSON.parse(warnings).forEach(message => this.toast(message, true));
       const blob = await response.blob();
       const disposition = response.headers.get('Content-Disposition') || '';
       const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || 'NexLab.pkt';
@@ -49,12 +51,12 @@ const App = {
     init && init(bg.querySelector('.modal'), close);
     return close;
   },
-  exportLabModal(ids, packetTracerAvailable) {
+  exportLabModal(ids) {
     if (!ids.length) return this.toast('Pilih lab terlebih dahulu', true);
     this.modal(`<h3>Ekspor lab</h3>
       <div class="field"><label for="exportFormat">Format ekspor</label><select class="input" id="exportFormat">
         <option value="json">NexLab JSON (.nexlab.json)</option>
-        ${packetTracerAvailable ? '<option value="pkt">Cisco Packet Tracer (.pkt)</option>' : ''}
+        <option value="pkt">Cisco Packet Tracer (.pkt)</option>
         <option value="configs">Konfigurasi perangkat (.txt)</option>
       </select></div>
       <fieldset id="exportContents" style="border:0;padding:0;margin:0">
@@ -80,7 +82,7 @@ const App = {
         help.textContent = json
           ? 'Pilih bagian yang akan disertakan dalam file NexLab JSON.'
           : format.value === 'pkt'
-            ? 'Packet Tracer hanya mendukung topologi dan konfigurasi yang kompatibel.'
+            ? 'Lab akan dikonversi otomatis. Perangkat atau fitur yang tidak kompatibel akan dilewati dengan peringatan.'
             : 'File teks berisi konfigurasi perangkat simulasi yang tersedia.';
       };
       format.onchange = update;
@@ -468,7 +470,7 @@ const App = {
             <dt>Diubah</dt><dd>${fmt(cur.updated)}</dd>${all ? `<dt>Pemilik</dt><dd>${esc(cur.owner)}</dd>` : ''}</dl>
           <div class="pv-actions"><button class="btn primary" data-p="open">${UI.play} Buka lab</button><button class="btn" data-p="exp">${UI.down} Ekspor</button><span class="grow"></span><button class="btn danger" data-p="del">${UI.trash} Hapus</button></div></div>`;
       p.querySelector('[data-p=open]').onclick = () => { location.hash = '#/lab/' + cur.id; };
-      p.querySelector('[data-p=exp]').onclick = () => this.exportLabModal([cur.id], cur.packet_tracer);
+      p.querySelector('[data-p=exp]').onclick = () => this.exportLabModal([cur.id]);
       p.querySelector('[data-p=del]').onclick = () => del([cur.id]);
     };
     const render = () => {
@@ -504,8 +506,7 @@ const App = {
     $('#bAi').onclick = () => this.aiCreateModal();
     $('#bExp').onclick = () => {
       const ids = pick();
-      const packetTracerAvailable = ids.length > 0 && ids.every(id => labs.find(lab => lab.id === id)?.packet_tracer);
-      this.exportLabModal(ids, packetTracerAvailable);
+      this.exportLabModal(ids);
     };
     $('#bDel').onclick = () => del(pick());
     $('#bImport').onclick = () => this.importLabModal();

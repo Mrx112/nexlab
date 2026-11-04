@@ -68,9 +68,45 @@ class PacketTracerCodecTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'perubahan port atau ujung koneksi'):
             export_pkt(data)
 
-    def test_export_requires_packet_tracer_source(self):
-        with self.assertRaisesRegex(ValueError, 'impor file Cisco Packet Tracer'):
-            export_pkt({'nodes': [], 'links': []})
+    def test_native_lab_is_converted_with_supported_topology_and_config(self):
+        data, _ = import_pkt(encode_pkt(_XML))
+        data.pop('_packet_tracer')
+        data['nodes'][1]['x'] = 320
+        data['links'][0]['style'] = 'fiber'
+        warnings = []
+
+        packet = export_pkt(data, warnings)
+        converted = decode_pkt(packet)
+        root = ET.fromstring(converted)
+        self.assertEqual(root.findtext('./NETWORK/DEVICES/DEVICE/ENGINE/NAME'), 'R1')
+        config_lines = [line.text for line in root.findall('./NETWORK/DEVICES/DEVICE/ENGINE/RUNNINGCONFIG/LINE')]
+        self.assertIn('hostname R1', config_lines)
+        self.assertEqual(float(root.findtext('./NETWORK/DEVICES/DEVICE/ENGINE/COORD_SETTINGS/X_COORD')), 120)
+        link = root.find('./NETWORK/LINKS/LINK')
+        self.assertEqual(link.findtext('TYPE'), 'eFiber')
+        self.assertEqual(link.findtext('FROM'), 'save-ref-id:1')
+        self.assertEqual(link.findtext('TO'), 'save-ref-id:2')
+        self.assertTrue(any('dibuat dari perangkat' in warning for warning in warnings))
+
+        imported, _ = import_pkt(packet)
+        self.assertEqual([node['type'] for node in imported['nodes']], ['router', 'pc'])
+        self.assertEqual(len(imported['links']), 1)
+
+    def test_native_export_warns_when_skipping_unsupported_devices_and_links(self):
+        lab = {
+            'nodes': [
+                {'id': 1, 'type': 'pc', 'name': 'PC1', 'x': 0, 'y': 0},
+                {'id': 2, 'type': 'qemu', 'name': 'VM1', 'x': 0, 'y': 0},
+            ],
+            'links': [{'a': {'node': 1, 'iface': 'FastEthernet0'},
+                       'b': {'node': 2, 'iface': 'e0'}}],
+        }
+        warnings = []
+        root = ET.fromstring(decode_pkt(export_pkt(lab, warnings)))
+        self.assertEqual(len(root.findall('./NETWORK/DEVICES/DEVICE')), 1)
+        self.assertEqual(len(root.findall('./NETWORK/LINKS/LINK')), 0)
+        self.assertTrue(any('perangkat tidak didukung' in warning for warning in warnings))
+        self.assertTrue(any('koneksi tidak kompatibel' in warning for warning in warnings))
 
 
 if __name__ == '__main__':
