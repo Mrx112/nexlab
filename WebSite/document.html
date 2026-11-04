@@ -318,7 +318,7 @@
           <figcaption>Halaman Main: daftar lab dengan pratinjau topologi dan jumlah node menyala.</figcaption>
         </figure>
         <h3>Ekspor &amp; impor lab</h3>
-        <p>Dari menu lab, pilih <b>Ekspor</b> untuk mengunduh file <code>.nexlab.json</code> (topologi, konfigurasi, workbook, peta 3D). Gunakan <b>Impor</b> di halaman Main untuk memuatnya di komputer lain. File yang sama juga bisa dibagikan di Marketplace website.</p>
+        <p>Dari menu lab, pilih <b>Ekspor</b> untuk mengunduh file <code>.nexlab.json</code> (topologi, konfigurasi, workbook, peta 3D). File Cisco Packet Tracer <code>.pkt</code> juga dapat diimpor dari halaman Main. Lab hasil impor dapat disimpan kembali sebagai <code>.pkt</code>; perangkat dan koneksi Packet Tracer yang tidak didukung NexLab tetap dipertahankan pada file hasil ekspor. Nama, posisi, dan penghapusan perangkat/koneksi yang dipetakan dapat diubah; perubahan konfigurasi IOS, penambahan perangkat, serta penambahan atau penyambungan ulang koneksi belum didukung.</p>
       </section>
 
       <!-- ===================================================== EDITOR -->
@@ -857,7 +857,7 @@ sudo dhclient pnet0</code></pre>
         </details>
         <details>
           <summary>Bisakah file lab dipakai di Packet Tracer?</summary>
-          <p>Tidak. Format NexLab adalah <code>.nexlab.json</code>. Konfigurasi perangkat dapat diekspor ke <code>.txt</code> dan ditempel ke perangkat lain.</p>
+          <p>NexLab memakai <code>.nexlab.json</code> sebagai format lab utamanya, dan dapat mengimpor file Cisco Packet Tracer <code>.pkt</code> serta menyimpan kembali lab impor sebagai <code>.pkt</code>. Saat ini ekspor Packet Tracer mempertahankan struktur file yang diimpor; perubahan konfigurasi IOS, perangkat baru, koneksi baru, dan penyambungan ulang koneksi belum didukung.</p>
         </details>
       </section>
 

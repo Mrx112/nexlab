@@ -135,6 +135,8 @@
     "Hapus lab ini?": "Delete this lab?",
     "Simpan lab": "Save lab",
     "Ekspor": "Export",
+    "Ekspor .pkt": "Export .pkt",
+    "Simpan sebagai Cisco Packet Tracer (.pkt)": "Save as Cisco Packet Tracer (.pkt)",
     "Impor": "Import",
     "Ya": "Yes",
     "Tidak": "No",
