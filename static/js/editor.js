@@ -28,6 +28,7 @@ class Editor {
     const [d] = await Promise.all([App.api('GET', `/api/labs/${this.id}`), App.loadTemplates(), App.loadSystem()]);
     if (!d || !this.alive) return;
     this.name = d.name; this.desc = d.description || ''; this.lab = d.lab; this.status = d.status;
+    this.packetTracerAvailable = d.packet_tracer === true;
     this.tpl = Object.fromEntries(App.templates.map(t => [t.type, t]));
     this.renderShell();
     this.drawAll();
@@ -447,7 +448,7 @@ class Editor {
       ['Matikan semua node', () => this.power('stop'), '', false, 'stop'],
       ['Wipe semua node', () => this.power('wipe'), '', false, 'wipe'],
       ['Console ke semua node', () => this.lab.nodes.filter(n => this.running(n.id) && this.tpl[n.type]?.kind !== 'cloud').forEach(n => Consoles.open(this.id, n)), '', false, 'term'],
-      '-', ['Ekspor lab', () => App.exportLabModal([this.id]), '', false, 'down'],
+      '-', ['Ekspor lab', () => App.exportLabModal([this.id], this.packetTracerAvailable), '', false, 'down'],
       ['Timer lab', () => this.workbookPanel(true), '', false, 'clock'],
       ['Undo', () => this.undo(), 'Ctrl+Z', false, 'wipe'],
       ['Pintasan keyboard', () => this.shortcutsModal(), '?', false, 'help'],

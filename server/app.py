@@ -35,7 +35,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.10'
+VERSION = '1.4.11'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -533,6 +533,10 @@ def lab_access(req, lab_id):
     return row
 
 
+def has_packet_tracer_source(data):
+    return isinstance(data.get('_packet_tracer'), dict)
+
+
 async def labs_list(req):
     u = req['user']
     db = req.app['db']
@@ -556,7 +560,8 @@ async def labs_list(req):
                        if l['a']['node'] in idx and l['b']['node'] in idx and idx[l['a']['node']] < 80 and idx[l['b']['node']] < 80]}
         out.append({'id': r['id'], 'name': r['name'], 'description': r['description'], 'owner': r['username'], 'thumb': thumb,
                     'created': r['created'], 'updated': r['updated'], 'nodes': len(nodes),
-                    'links': len(data.get('links', [])), 'running': running, 'types': types})
+                    'links': len(data.get('links', [])), 'running': running, 'types': types,
+                    'packet_tracer': has_packet_tracer_source(data)})
     return web.json_response({'labs': out})
 
 
@@ -648,6 +653,7 @@ async def lab_get(req):
     row = lab_access(req, lid)
     rt = req.app['mgr'].get(lid)
     lab = rt.export()
+    packet_tracer = has_packet_tracer_source(lab)
     lab.pop('_packet_tracer', None)
     lab['configsets'] = [{'name': k, 'saved': v['saved'], 'nodes': len(v['nodes'])} for k, v in (lab.get('configsets') or {}).items()]
     for n in lab['nodes']:
@@ -658,7 +664,8 @@ async def lab_get(req):
             n['host'] = {k: st.get(k) for k in ('ip', 'mask', 'gw', 'dns', 'dhcp', 'wifi', 'scripts')}
             if n['type'] == 'server':
                 n['host']['services'] = st.get('services')
-    return web.json_response({'id': lid, 'name': row['name'], 'description': row['description'], 'lab': lab,
+    return web.json_response({'id': lid, 'name': row['name'], 'description': row['description'],
+                              'packet_tracer': packet_tracer, 'lab': lab,
                               'status': rt.status()})
 
 
