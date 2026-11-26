@@ -319,6 +319,7 @@
         </figure>
         <h3>Ekspor &amp; impor lab</h3>
         <p>Dari menu lab, pilih <b>Ekspor</b> untuk memilih format NexLab JSON (<code>.nexlab.json</code>), Cisco Packet Tracer (<code>.pkt</code>), atau konfigurasi perangkat (<code>.txt</code>). Untuk NexLab JSON, topologi, konfigurasi, catatan, workbook, peta 3D, dan timer dapat dipilih satu per satu; opsi yang sama tersedia saat mengimpor JSON. File Cisco Packet Tracer <code>.pkt</code> juga dapat diimpor dari halaman Main. Lab hasil impor dapat disimpan kembali sebagai <code>.pkt</code>; perangkat dan koneksi Packet Tracer yang tidak didukung NexLab tetap dipertahankan pada file hasil ekspor. Nama, posisi, dan penghapusan perangkat/koneksi yang dipetakan dapat diubah; perubahan konfigurasi IOS, penambahan perangkat, serta penambahan atau penyambungan ulang koneksi belum didukung.</p>
+        <p>Lab NexLab biasa juga dapat diekspor ke <code>.pkt</code>. Perangkat tanpa padanan langsung tetap disertakan: OLT, ODP, ONT, dan Hub menjadi switch 2950T (port diberi nomor FastEthernet0/x), sedangkan Kamera CCTV, IP Phone, IoT, Smartphone, dan Tablet menjadi PC. Koneksi Wi-Fi tidak berbentuk kabel di Packet Tracer sehingga perlu diatur ulang. Lab kosong tidak dapat diekspor ke <code>.pkt</code>.</p>
       </section>
 
       <!-- ===================================================== EDITOR -->
@@ -667,6 +668,14 @@ images/qemu/mikrotik-7.15/chr.img
 images/qemu/linux-alpine/alpine.iso
 images/qemu/vyos.qcow2</code></pre>
         <p>Tambahkan node <b>QEMU VM</b>, pilih image, atur RAM/CPU/jumlah NIC, lalu Start. Setiap node memakai disk overlay sendiri sehingga image asli tidak berubah; tombol <b>Wipe</b> menghapus overlay.</p>
+        <h3>Akselerasi VM</h3>
+        <p>Atur di <b>Status sistem → Kemampuan mode real → Akselerasi VM</b> (khusus admin):</p>
+        <ul>
+          <li><b>Otomatis</b> (disarankan) — memakai KVM di Linux, HVF di Mac Intel, dan WHPX (Hyper-V) di Windows bila tersedia; selain itu emulasi TCG.</li>
+          <li><b>WHPX</b> — paksa akselerasi Hyper-V di Windows.</li>
+          <li><b>TCG</b> — emulasi murni, paling kompatibel tetapi paling lambat.</li>
+        </ul>
+        <p>Jika akselerator gagal untuk suatu image, VM otomatis dijalankan ulang dengan TCG dan editor menampilkan pemberitahuan. Bila WHPX belum tersedia di Windows, aktifkan <b>Windows Hypervisor Platform</b> di <i>Turn Windows features on or off</i>, lalu restart komputer. Lokasi folder image yang sebenarnya juga ditampilkan di Status sistem.</p>
         <div class="callout warn"><p>Image vendor (misalnya Cisco) tidak disertakan karena berlisensi. Gunakan image yang Anda miliki secara sah.</p></div>
         <h3>Linux Host &amp; bridge (khusus Linux, root)</h3>
         <p>Node <b>Linux Host</b> dan bridge Layer 2 memerlukan hak root. Jalankan NexLab hasil instalasi dengan:</p>

@@ -54,6 +54,16 @@ _EXPORT_PORTS = {
     'cloud': {'eth0'},
 }
 
+# Device types without their own model in the bundled template are exported as the closest
+# equivalent so the topology keeps its devices and cabling: passive/L2 fibre and hub devices
+# become a 2950T switch (ports renumbered FastEthernet0/1..24), other end devices become a PC.
+_AS_SWITCH = ('olt', 'odp', 'ont', 'hub')
+_AS_PC = ('cctv', 'ipphone', 'iot', 'smartphone', 'tablet')
+_EXPORT_TEMPLATE_MODELS.update({t: '2950T-24' for t in _AS_SWITCH})
+_EXPORT_TEMPLATE_MODELS.update({t: 'PC-PT' for t in _AS_PC})
+_EXPORT_PORTS.update({t: {'FastEthernet0'} for t in _AS_PC})
+_SWITCH_PORT_ORDER = [f'FastEthernet0/{index}' for index in range(1, 25)] + ['GigabitEthernet0/1', 'GigabitEthernet0/2']
+
 _EXPORT_MODEL_PORTS = {
     '2911': _EXPORT_PORTS['router'],
     '2950T-24': _EXPORT_PORTS['switch'],
@@ -518,6 +528,32 @@ def _export_new_pkt(lab, warnings):
             _replace_text(port, 'BIA', address)
         device_container.append(device)
         exported_nodes[int(node['id'])] = (node, device)
+    if not exported_nodes:
+        raise ValueError('Lab belum berisi perangkat yang dapat diekspor ke Packet Tracer. '
+                         'Tambahkan minimal satu perangkat terlebih dahulu.')
+
+    # Renumber the ports of devices exported as a switch, in cabling order.
+    switch_ports = {}
+    for link in lab.get('links', []):
+        for side in ('a', 'b'):
+            try:
+                node_id, iface = int(link[side]['node']), str(link[side]['iface'])
+            except (KeyError, TypeError, ValueError):
+                continue
+            node = nodes_by_id.get(node_id)
+            if node and node.get('type') in _AS_SWITCH and (node_id, iface) not in switch_ports:
+                used = sum(1 for key in switch_ports if key[0] == node_id)
+                if used < len(_SWITCH_PORT_ORDER):
+                    switch_ports[(node_id, iface)] = _SWITCH_PORT_ORDER[used]
+
+    def export_endpoint(node_id, iface):
+        """(type, iface) as seen by the Packet Tracer model the node is exported as."""
+        node_type = nodes_by_id[node_id].get('type')
+        if node_type in _AS_SWITCH:
+            return 'switch', switch_ports.get((node_id, iface), '')
+        if node_type in _AS_PC:
+            return 'pc', iface
+        return node_type, iface
 
     connected_ifaces = {}
     occupied_ports = set()
@@ -535,14 +571,14 @@ def _export_new_pkt(lab, warnings):
         if (
             node_a == node_b
             or any(node_id not in exported_nodes for node_id, _ in endpoints)
-            or any(iface not in _EXPORT_PORTS.get(nodes_by_id[node_id].get('type'), set())
+            or any(export_endpoint(node_id, iface)[1] not in _EXPORT_PORTS.get(export_endpoint(node_id, iface)[0], set())
                    for node_id, iface in endpoints)
             or any(endpoint in occupied_ports for endpoint in endpoints)
         ):
             skipped_links += 1
             continue
         mapped = tuple(
-            (node_id, _packet_tracer_port(nodes_by_id[node_id]['type'], iface))
+            (node_id, _packet_tracer_port(*export_endpoint(node_id, iface)))
             for node_id, iface in endpoints
         )
         if any(
@@ -565,7 +601,7 @@ def _export_new_pkt(lab, warnings):
             lines = _packet_ios_config(node, connected_ifaces.get(node_id, set()), warnings)
             _set_config(engine, 'RUNNINGCONFIG', lines)
             _set_config(engine, 'STARTUPCONFIG', lines)
-        elif node_type in ('pc', 'laptop', 'server', 'printer'):
+        elif node_type in ('pc', 'laptop', 'server', 'printer') + _AS_PC:
             _packet_host_config(engine, node, warnings)
 
     link_container.clear()
@@ -608,6 +644,13 @@ def _export_new_pkt(lab, warnings):
         warnings.append('Cloud NexLab dikonversi sebagai Cloud-PT; mode cloud NexLab tidak ikut dikonversi.')
     if any(node.get('type') == 'laptop' for node in nodes):
         warnings.append('Laptop NexLab dikonversi sebagai PC berkabel; fitur nirkabel tidak ikut dikonversi.')
+    as_switch = sorted({node.get('type') for node in nodes if node.get('type') in _AS_SWITCH})
+    if as_switch:
+        warnings.append(f'{", ".join(TEMPLATES[t]["label"] for t in as_switch)} dikonversi sebagai switch 2950T (port diberi nomor '
+                        'FastEthernet0/x); fungsi GPON/splitter dan konfigurasinya tidak ikut dikonversi.')
+    as_pc = sorted({node.get('type') for node in nodes if node.get('type') in _AS_PC})
+    if as_pc:
+        warnings.append(f'{", ".join(TEMPLATES[t]["label"] for t in as_pc)} dikonversi sebagai PC; perangkat yang hanya memakai Wi-Fi tampil tanpa kabel.')
     if lab.get('notes') or lab.get('workbook') or lab.get('map3d') or lab.get('timer') or lab.get('configsets'):
         warnings.append('Catatan, workbook, timer, config set, dan peta 3D NexLab tidak tersedia dalam format .pkt.')
     if exported_nodes:

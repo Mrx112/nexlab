@@ -4,16 +4,16 @@ const GUIDE_CATS = ['Instalasi NexLab', 'Dasar', 'Switching', 'Routing', 'Layana
 
 const GUIDE_KB = [
 { id: 'install-windows', cat: 'Instalasi NexLab', lvl: 'Pemula', title: 'Menjalankan NexLab di Windows',
-  kw: 'windows install instalasi pasang jalankan server exe bat python firewall autostart startup winget qemu whpx',
+  kw: 'windows install instalasi pasang jalankan server exe installer firewall shortcut update qemu whpx akselerasi hyper-v',
   intro: 'NexLab berjalan native di Windows 10/11. Semua fitur simulasi, Peta 3D, panduan dan console Perangkat Fisik tersedia. VM QEMU berjalan dengan jaringan socket (tanpa hak admin).',
   steps: [
-    ['Pasang', 'Ekstrak zip, lalu klik ganda install-windows.bat. Installer mencari Python (atau menawarkan pemasangan lewat winget), membuat .venv, memasang dependensi, dan opsional memasang QEMU serta autostart saat login.', '', ''],
-    ['Jalankan', 'Klik ganda start-windows.bat. Browser terbuka otomatis ke http://localhost:8080/.', 'PowerShell / CMD', 'start-windows.bat\nstart-windows.bat --port 8090'],
-    ['Buka dari komputer lain', 'Klik kanan scripts\\firewall-windows.bat → Run as administrator untuk membuka port 8080, pastikan profil jaringan Private, lalu buka http://IP-komputer:8080/ dari perangkat lain.', 'CMD (admin)', 'netsh advfirewall firewall add rule name="NexLab 8080" dir=in action=allow protocol=TCP localport=8080'],
-    ['Akselerasi VM (opsional)', 'Bawaan memakai emulasi TCG. Jika fitur Windows Hypervisor Platform aktif, coba akselerasi WHPX:', 'CMD', 'set NEXLAB_ACCEL=whpx\nstart-windows.bat'],
-    ['Versi .exe tanpa Python (opsional)', 'Buat aplikasi mandiri yang bisa disalin ke PC lain:', 'CMD', 'py scripts\\build-app.py\nREM hasil: dist\\NexLab\\NexLab.exe'],
+    ['Pasang', 'Unduh NexLab-Setup-Windows.cmd dari halaman Download website NexLab, lalu klik ganda. Installer mengunduh paket resmi, memeriksa SHA-256, memasang ke %LOCALAPPDATA%\\Programs\\NexLab, dan membuat shortcut Desktop & Start Menu. Python tidak perlu dipasang.', '', ''],
+    ['Jalankan', 'Buka shortcut NexLab. Browser terbuka otomatis ke http://localhost:8080/. Untuk port lain, jalankan dari folder instalasi:', 'CMD', 'NexLab.exe --open --port 8090'],
+    ['Buka dari komputer lain', 'Saat Windows Firewall bertanya, pilih Allow access (profil Private). Jika tidak muncul, buka port lewat CMD sebagai administrator, lalu akses http://IP-komputer:8080/ dari perangkat lain.', 'CMD (admin)', 'netsh advfirewall firewall add rule name="NexLab 8080" dir=in action=allow protocol=TCP localport=8080'],
+    ['Akselerasi VM', 'Buka Status sistem → Kemampuan mode real → Akselerasi VM dan pilih Otomatis. NexLab memakai WHPX (Hyper-V) bila tersedia; jika belum, aktifkan "Windows Hypervisor Platform" di Turn Windows features on or off lalu restart. Bila WHPX gagal untuk suatu image, VM otomatis dijalankan ulang dengan TCG.', '', ''],
+    ['Update aplikasi', 'Buka Status sistem → Scan update. Jika ada versi baru, admin dapat memilih Pasang update sekarang: NexLab mengunduh, memverifikasi, memasang, lalu membuka ulang. Database, akun, lab dan image tetap aman.', '', ''],
   ],
-  tips: ['Node Linux Host dan bridge ke NIC fisik khusus server Linux. Di Windows gunakan QEMU dengan image Linux kecil (Alpine) dan node Cloud (NAT).', 'Setelah mengubah kabel VM QEMU, matikan lalu nyalakan ulang VM tersebut.', 'Image QEMU ditaruh di data\\images\\qemu\\<nama>\\file.qcow2.'] },
+  tips: ['Node Linux Host dan bridge ke NIC fisik khusus server Linux. Di Windows gunakan QEMU dengan image Linux kecil (Alpine) dan node Cloud (NAT).', 'Setelah mengubah kabel VM QEMU, matikan lalu nyalakan ulang VM tersebut.', 'Image QEMU ditaruh di %LOCALAPPDATA%\\NexLab\\data\\images\\qemu (lokasi persisnya tampil di Status sistem), satu folder per image atau file langsung.'] },
 { id: 'install-macos', cat: 'Instalasi NexLab', lvl: 'Pemula', title: 'Menjalankan NexLab di macOS',
   kw: 'macos mac macbook apple install instalasi pasang jalankan command homebrew brew launchagent hvf qemu gatekeeper',
   intro: 'NexLab berjalan di macOS (Intel dan Apple Silicon).',

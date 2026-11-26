@@ -34,6 +34,17 @@ const App = {
       setTimeout(() => URL.revokeObjectURL(href), 1000);
     } catch (e) { this.toast('Server tidak dapat dihubungi saat mengunduh file', true); }
   },
+  accelControl(c) {
+    const hint = c.os === 'windows'
+      ? (c.whpx ? 'WHPX tersedia di komputer ini; mode Otomatis memakainya.'
+                : 'WHPX belum tersedia. Aktifkan "Windows Hypervisor Platform" di Turn Windows features on or off, lalu restart komputer.')
+      : (c.os === 'linux' ? 'Otomatis memakai KVM bila /dev/kvm dapat diakses.' : 'Otomatis memakai HVF pada Mac Intel.');
+    if (this.me.role !== 'admin') return `<div class="muted" style="font-size:12.5px">${esc(hint)}</div>`;
+    const options = [['auto', 'Otomatis (disarankan)'], ...(c.os === 'windows' ? [['whpx', 'WHPX (Hyper-V)']] : []), ['tcg', 'TCG (emulasi, paling kompatibel)']];
+    return `<div class="row" style="margin-top:6px;gap:8px;align-items:center"><select class="input" id="qemuAccel" aria-label="Akselerasi VM" ${c.accel_env ? 'disabled' : ''} style="max-width:260px">
+        ${options.map(([value, label]) => `<option value="${value}" ${c.accel_pref === value ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
+      <div class="muted" style="font-size:12.5px;margin-top:4px">${c.accel_env ? 'Diatur lewat variabel NEXLAB_ACCEL; hapus variabel itu untuk memakai pilihan ini. ' : ''}${esc(hint)} Bila akselerator gagal, VM otomatis dijalankan ulang dengan TCG.</div>`;
+  },
   toast(msg, bad) {
     const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
     document.getElementById('toasts').appendChild(t);
@@ -535,7 +546,7 @@ const App = {
       <td><button class="btn xs" data-ping-ip="${esc(n.ip)}">Ping</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Belum ada perangkat di cache ARP Windows.</td></tr>';
     const interfaceRows = (c.interfaces || []).map(i => {
       const addresses = i.addresses || (s.addresses || []).filter(a => a.iface === i.name).map(a => a.ip);
-      return `<tr><td class="mono">${esc(i.name)}</td><td>${esc(i.status || (i.bridge ? 'bridge' : 'NIC'))}</td><td class="mono">${esc(addresses.join(', ') || '—')}</td>
+      return `<tr><td><span class="mono">${esc(i.name)}</span>${i.description ? `<div class="muted" style="font-size:11.5px">${esc(i.description)}</div>` : ''}</td><td>${esc([i.status || (i.bridge ? 'bridge' : 'NIC'), i.kind].filter(Boolean).join(' · '))}</td><td class="mono">${esc(addresses.join(', ') || '—')}</td>
         <td class="mono">${esc(i.gateway || '—')}</td><td class="mono">${esc(i.mac || '—')}</td></tr>`;
     }).join('') || (s.addresses || []).map(a => `<tr><td class="mono">${esc(a.iface)}</td><td>NIC</td><td class="mono">${esc(a.ip)}</td><td>—</td><td>—</td></tr>`).join('');
     v.innerHTML = `<div class="page-head"><div><h2>Status sistem</h2><p>Komputer (Linux, Windows atau macOS) yang menjalankan NexLab dan cara mengaksesnya dari perangkat lain.</p></div><span class="grow"></span><button class="btn sm" id="sysRef">${UI.refresh} Refresh</button></div>
@@ -556,7 +567,7 @@ const App = {
           <dt>Uptime</dt><dd>${Math.floor(s.uptime / 3600)} jam ${Math.floor(s.uptime % 3600 / 60)} menit</dd><dt>Versi</dt><dd>${esc(s.version)}</dd></dl></section>
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Kemampuan mode real</h3>
         <dl class="kv"><dt>Sistem operasi</dt><dd>${esc(s.os || c.os)}</dd><dt>Admin / root</dt><dd>${yes(c.root)}</dd><dt>QEMU</dt><dd>${yes(c.qemu && c.qemu_img)}</dd>
-          <dt>Akselerasi VM</dt><dd>${esc(c.accel)}</dd><dt>Jaringan VM</dt><dd>${c.netmode === 'tap' ? 'Linux bridge (bisa bridge ke NIC fisik)' : 'Socket UDP + NAT (tanpa admin)'}</dd>
+          <dt>Akselerasi VM</dt><dd>${esc(c.accel)}${this.accelControl(c)}</dd><dt>Jaringan VM</dt><dd>${c.netmode === 'tap' ? 'Linux bridge (bisa bridge ke NIC fisik)' : 'Socket UDP + NAT (tanpa admin)'}</dd>
           <dt>Linux Host (netns)</dt><dd>${yes(c.avail && c.avail.netns)}</dd><dt>SSH ke perangkat (asyncssh)</dt><dd>${yes(c.asyncssh)}</dd></dl>
         <p class="muted" style="font-size:13px">${c.os === 'linux' ? (c.root ? 'Semua fitur real aktif.' : 'Mode simulasi berjalan penuh. Jalankan dengan <span class="mono">sudo ./start.sh</span> untuk bridge ke NIC fisik dan Linux Host.') : 'Simulasi, Peta 3D, panduan dan console Perangkat Fisik berjalan penuh. VM QEMU berjalan dengan jaringan socket; Linux Host dan bridge NIC khusus server Linux.'}</p></section>
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Uji ping jaringan</h3>
@@ -571,7 +582,8 @@ const App = {
         <p class="muted">Berisi perangkat IPv4 yang sudah pernah terlihat oleh Windows; NexLab tidak memindai seluruh subnet. Ping IP perangkat untuk memperbarui cache. IP ini dapat dipilih sebagai alamat Perangkat Fisik di editor.</p>
         <div style="overflow:auto"><table class="t"><tr><th>IP</th><th>MAC</th><th>Interface</th><th>Status</th><th></th></tr><tbody id="hostNeighbors">${renderNeighbors(s.neighbors)}</tbody></table></div></section>` : ''}
       <section class="panel"><h3 style="font-size:16px;margin-bottom:10px">Image QEMU</h3>
-        ${c.images.length ? `<table class="t"><tr><th>Nama</th><th>File</th></tr>${c.images.map(i => `<tr><td>${esc(i.name)}</td><td class="mono" style="font-size:12px">${esc(i.disks.join(', '))}</td></tr>`).join('')}</table>` : '<p class="muted">Belum ada. Taruh image di <span class="mono">data/images/qemu/&lt;nama&gt;/</span>, contoh <span class="mono">data/images/qemu/vios/vios.qcow2</span>.</p>'}</section>
+        ${c.images.length ? `<table class="t"><tr><th>Nama</th><th>File</th></tr>${c.images.map(i => `<tr><td>${esc(i.name)}</td><td class="mono" style="font-size:12px">${esc(i.disks.join(', '))}</td></tr>`).join('')}</table>` : `<p class="muted">Belum ada. Taruh image di <span class="mono" style="word-break:break-all">${esc(c.images_dir || 'data/images/qemu')}</span> — satu folder per image (mis. <span class="mono">vios/vios.qcow2</span>) atau file langsung (mis. <span class="mono">chr-7.24.6.img</span>), lalu klik Refresh.</p>`}
+        ${c.images.length ? `<p class="muted" style="font-size:12.5px">Lokasi: <span class="mono" style="word-break:break-all">${esc(c.images_dir || '')}</span></p>` : ''}</section>
     </div>`;
     v.querySelector('#sysRef').onclick = () => this.pageSystem(v);
     const pingInput = v.querySelector('#hostPingTarget'), pingResult = v.querySelector('#hostPingResult');
@@ -652,6 +664,11 @@ const App = {
     const extra = document.createElement('div'); extra.className = 'cols'; extra.style.marginTop = '14px';
     v.appendChild(extra);
     const [ai, run] = await Promise.all([this.api('GET', '/api/ai/status?force=1', null, true), this.me.role === 'admin' ? this.api('GET', '/api/admin/running', null, true) : null]);
+    const accelSelect = v.querySelector('#qemuAccel');
+    if (accelSelect) accelSelect.onchange = async () => {
+      const r = await this.api('POST', '/api/admin/settings', { qemu_accel: accelSelect.value });
+      if (r) { this.toast('Akselerasi VM disimpan; berlaku untuk VM yang dinyalakan berikutnya'); this.pageSystem(v); }
+    };
     if (!v.contains(extra)) return;
     extra.innerHTML = `<section class="panel"><h3>Integrasi Claude CLI</h3>${ai ? this.aiStatusHtml(ai) : '<p class="muted">Status tidak terbaca</p>'}
         ${ai ? `<dl class="kv" style="margin-top:10px"><dt>Terpasang</dt><dd>${ai.installed ? `<span class="yes">ya</span> ${esc(ai.version)}` : '<span class="no">tidak</span>'}</dd>

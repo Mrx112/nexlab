@@ -21,6 +21,7 @@ import platform
 import shutil
 import socket
 import struct
+import threading
 import subprocess
 import sys
 
@@ -83,17 +84,66 @@ def net_mode():
     return 'tap' if OS == 'linux' and is_root() and shutil.which('ip') else 'socket'
 
 
+ACCEL_CHOICES = ('auto', 'whpx', 'tcg')
+_accel = {'pref': 'auto', 'whpx': None}
+_accel_lock = threading.Lock()
+TCG_ARGS = (['-accel', 'tcg,thread=multi'], 'tcg (emulasi, lebih lambat)')
+
+
+def set_accel_preference(value):
+    """Admin setting from Status sistem: 'auto', 'whpx' or 'tcg'. NEXLAB_ACCEL still overrides it."""
+    _accel['pref'] = value if value in ACCEL_CHOICES else 'auto'
+
+
+def accel_preference():
+    env = os.environ.get('NEXLAB_ACCEL', '').lower()
+    return env if env in ACCEL_CHOICES else _accel['pref']
+
+
+def whpx_available():
+    """True when QEMU can start with -accel whpx on this Windows host.
+
+    Probed by briefly starting a paused QEMU: the optional-feature state reported by Windows does
+    not reliably reflect whether WHPX works. Cached for the process lifetime (changes need a reboot)."""
+    if OS != 'windows':
+        return False
+    with _accel_lock:
+        if _accel['whpx'] is None:
+            _accel['whpx'] = _probe_whpx()
+    return _accel['whpx']
+
+
+def _probe_whpx():
+    qbin = qemu_bin()
+    if not qbin:
+        return False
+    try:
+        proc = subprocess.Popen([qbin, '-accel', 'whpx,kernel-irqchip=off', '-machine', 'q35', '-display', 'none',
+                                 '-monitor', 'none', '-serial', 'none', '-S'],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    except OSError:
+        return False
+    try:
+        proc.wait(timeout=2)            # exits at once when WHPX is unavailable
+        return False
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+        return True
+
+
 def accel_args():
-    want = os.environ.get('NEXLAB_ACCEL', '').lower()
+    want = accel_preference()
     if want == 'tcg':
         return ['-accel', 'tcg,thread=multi'], 'tcg (emulasi)'
     if OS == 'linux' and os.path.exists('/dev/kvm') and os.access('/dev/kvm', os.R_OK | os.W_OK):
         return ['-enable-kvm', '-cpu', 'host'], 'KVM'
     if OS == 'macos' and platform.machine() == 'x86_64':
         return ['-accel', 'hvf', '-cpu', 'host'], 'HVF'
-    if OS == 'windows' and want == 'whpx':
+    if OS == 'windows' and (want == 'whpx' or whpx_available()):
         return ['-accel', 'whpx,kernel-irqchip=off'], 'WHPX (Hyper-V)'
-    return ['-accel', 'tcg,thread=multi'], 'tcg (emulasi, lebih lambat)'
+    return TCG_ARGS
 
 
 def host_ifaces():
@@ -119,6 +169,10 @@ def caps(images_dir, interfaces=None):
         'os': OS,
         'netmode': mode,
         'accel': accel_args()[1],
+        'accel_pref': accel_preference(),
+        'accel_env': os.environ.get('NEXLAB_ACCEL', '').lower() in ACCEL_CHOICES,
+        'whpx': whpx_available(),
+        'images_dir': os.path.join(images_dir, 'qemu'),
         'avail': {'qemu': bool(qemu and qemu_img_bin()), 'netns': netns_ok},
         'bridge': mode == 'tap',
         'root': is_root(),
@@ -345,7 +399,6 @@ class RealManager:
                 '-serial', f'telnet:127.0.0.1:{port},server,nowait', '-boot', 'order=cd'] + drives
         if qmp_port is not None:
             args += ['-qmp', f'tcp:127.0.0.1:{qmp_port},server=on,wait=off']
-        args += accel_args()[0]
         taps = {}
         nics = []
         for i, ifn in enumerate(node['ifaces']):
@@ -368,22 +421,37 @@ class RealManager:
             sh('ip', 'link', 'set', tap, 'up')
             taps[ifn] = tap
             args += ['-netdev', f'tap,id=n{i},ifname={tap},script=no,downscript=no'] + dev
-        proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.DEVNULL,
-                                                    stderr=asyncio.subprocess.PIPE, cwd=d)
+        # A hardware accelerator (WHPX) can refuse a guest at start-up; retry once with TCG emulation.
+        attempts = [accel_args()]
+        if attempts[0][0] != TCG_ARGS[0]:
+            attempts.append(TCG_ARGS)
         hub = Hub(node['name'])
-        r = {'proc': proc, 'taps': taps, 'port': port, 'hub': hub, 'type': 'qemu', 'mode': mode,
+        r = {'taps': taps, 'port': port, 'hub': hub, 'type': 'qemu', 'mode': mode,
              'linksig': self.link_sig(rt, node), 'qmp_port': qmp_port, 'nics': nics,
              'socket_lock': asyncio.Lock()}
         r['nicsig'] = self.nic_sig(rt, node)
-        self.nodes[(rt.id, node['id'])] = r
-        await asyncio.sleep(0.5)
-        if proc.returncode is not None:
+        notice = ''
+        for index, (accel, label) in enumerate(attempts):
+            proc = await asyncio.create_subprocess_exec(*args, *accel, stdout=asyncio.subprocess.DEVNULL,
+                                                        stderr=asyncio.subprocess.PIPE, cwd=d)
+            r.update(proc=proc, accel=label)
+            self.nodes[(rt.id, node['id'])] = r
+            for _ in range(6 if index + 1 < len(attempts) else 2):   # give an accelerator time to fail
+                await asyncio.sleep(0.25)
+                if proc.returncode is not None:
+                    break
+            if proc.returncode is None:
+                break
             err = (await proc.stderr.read()).decode(errors='replace')[-400:]
+            if index + 1 < len(attempts):
+                notice = f'{label} gagal dipakai, VM dijalankan dengan emulasi TCG. '
+                print(f'[qemu] {node["name"]}: {label} gagal, mencoba TCG: {err.strip()[-200:]}')
+                continue
             self._cleanup_taps(r)
             self.nodes.pop((rt.id, node['id']), None)
-            return False, 'QEMU berhenti: ' + err
+            return False, notice + 'QEMU berhenti: ' + err
         asyncio.ensure_future(self._telnet_backend(r))
-        return True, ''
+        return True, notice
 
     # ---------------------------------------------------------------- portable (socket) links
     @staticmethod

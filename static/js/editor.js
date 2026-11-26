@@ -739,6 +739,7 @@ class Editor {
     const r = await App.api('POST', `/api/labs/${this.id}/power/${action}`, ids ? { nodes: ids } : {});
     if (!r) return;
     (r.errors || []).forEach(e => App.toast(e, true));
+    (r.notices || []).forEach(m => App.toast(m));
     this.status = r.status;
     if (action === 'wipe') await this.reloadLab(); else { this.drawNodes(); this.drawLinks(); this.statusbar(); this.inspect(); }
   }

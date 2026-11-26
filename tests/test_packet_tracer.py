@@ -159,6 +159,21 @@ class PacketTracerCodecTests(unittest.TestCase):
         self.assertTrue(any('perangkat tidak didukung' in warning for warning in warnings))
         self.assertTrue(any('koneksi tidak kompatibel' in warning for warning in warnings))
 
+    def test_ftth_devices_are_kept_as_switch_and_pc_equivalents(self):
+        from server.demo import TEMPLATE_LABS
+        lab = TEMPLATE_LABS['ftth'][1]()
+        warnings = []
+        root = ET.fromstring(decode_pkt(export_pkt(lab, warnings)))
+        self.assertEqual(len(root.findall('./NETWORK/DEVICES/DEVICE')), len(lab['nodes']))
+        wired = [l for l in lab['links'] if 'Wireless' not in l['a']['iface'] + l['b']['iface']]
+        self.assertEqual(len(root.findall('./NETWORK/LINKS/LINK')), len(wired))
+        self.assertTrue(any('switch 2950T' in warning for warning in warnings))
+        self.assertFalse(any('perangkat tidak didukung' in warning for warning in warnings))
+
+    def test_empty_lab_export_is_rejected_with_a_clear_message(self):
+        with self.assertRaisesRegex(ValueError, 'belum berisi perangkat'):
+            export_pkt({'nodes': [], 'links': []}, [])
+
 
 if __name__ == '__main__':
     unittest.main()

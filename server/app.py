@@ -21,7 +21,7 @@ from aiohttp import web, WSMsgType
 
 from .db import DB, hash_pw, check_pw
 from .runtime import RuntimeManager, ConsoleSession, kind_of
-from .real import RealManager, remote_console
+from .real import RealManager, remote_console, ACCEL_CHOICES, set_accel_preference, whpx_available
 from .templates import catalog, TEMPLATES
 from .demo import TEMPLATE_LABS
 from .state import running_config
@@ -35,7 +35,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.13'
+VERSION = '1.4.14'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -201,8 +201,14 @@ async def admin_settings(req):
             db.set_setting('title', str(d['title'])[:30])
         if 'allow_ai_users' in d:
             db.set_setting('allow_ai_users', '1' if d['allow_ai_users'] else '0')
+        if 'qemu_accel' in d:
+            if d['qemu_accel'] not in ACCEL_CHOICES:
+                return jerr('Pilihan akselerasi VM tidak dikenal')
+            db.set_setting('qemu_accel', d['qemu_accel'])
+            set_accel_preference(d['qemu_accel'])
     return web.json_response({'allow_register': db.setting('allow_register', '1') == '1',
                               'allow_ai_users': db.setting('allow_ai_users', '0') == '1',
+                              'qemu_accel': db.setting('qemu_accel', 'auto'),
                               'title': db.setting('title', 'NexLab')})
 
 
@@ -744,7 +750,10 @@ async def lab_export_pkt(req):
     lid = int(req.match_info['lid'])
     row = lab_access(req, lid)
     warnings = []
-    data = packet_tracer.export_pkt(req.app['mgr'].get(lid).export(), warnings)
+    try:
+        data = packet_tracer.export_pkt(req.app['mgr'].get(lid).export(), warnings)
+    except ValueError as error:
+        return jerr(str(error))
     return web.Response(body=data, content_type='application/octet-stream',
                         headers={
                             'Content-Disposition': f'attachment; filename="{packet_tracer.filename_for(row["name"])}"',
@@ -782,7 +791,7 @@ async def lab_power(req):
     d = await req.json() if req.can_read_body else {}
     ids = d.get('nodes')
     targets = [int(i) for i in ids] if ids else [n['id'] for n in rt.lab['nodes']]
-    errors = []
+    errors, notices = [], []
     for nid in targets:
         if nid not in rt.by_id:
             continue
@@ -793,12 +802,14 @@ async def lab_power(req):
             ok, msg = await rt.start_node(nid, req['user'])
             if not ok:
                 errors.append(f"{n['name']}: {msg}")
+            elif msg:
+                notices.append(f"{n['name']}: {msg.strip()}")
         elif action == 'stop':
             await rt.stop_node(nid)
         elif action == 'wipe':
             await rt.wipe_node(nid)
     req.app['mgr'].flush()
-    return web.json_response({'ok': not errors, 'errors': errors, 'status': rt.status()})
+    return web.json_response({'ok': not errors, 'errors': errors, 'notices': notices, 'status': rt.status()})
 
 
 async def node_config(req):
@@ -1287,6 +1298,7 @@ def build_app(data_dir, port=8080):
     app = web.Application(middlewares=[guard], client_max_size=20 * 1024 * 1024)
     app['db'] = DB(os.path.join(data_dir, 'nexlab.db'))
     app['real'] = RealManager(data_dir)
+    set_accel_preference(app['db'].setting('qemu_accel', 'auto'))
     app['mgr'] = RuntimeManager(app['db'], app['real'])
     app['started'] = time.time()
     app['port'] = port
@@ -1343,6 +1355,7 @@ def build_app(data_dir, port=8080):
 
     async def on_start(app):
         app['loop_task'] = asyncio.ensure_future(app['mgr'].loop())
+        app['accel_probe'] = asyncio.ensure_future(asyncio.to_thread(whpx_available))   # cache before first use
 
     async def on_stop(app):
         app['loop_task'].cancel()

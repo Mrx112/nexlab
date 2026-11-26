@@ -81,6 +81,19 @@ def process_rss_mb():
         return 0
 
 
+_ADAPTER_KINDS = (('Ethernet adapter ', 'Ethernet'), ('Wireless LAN adapter ', 'Wi-Fi'),
+                  ('Unknown adapter ', 'Virtual'), ('Tunnel adapter ', 'Tunnel'), ('PPP adapter ', 'PPP'))
+
+
+def _hidden_adapter(adapter):
+    """Disconnected virtual adapters (Wi-Fi Direct 'Local Area Connection* N', tunnels, Bluetooth PAN) are noise."""
+    if adapter['status'] != 'Disconnected' or adapter['addresses']:
+        return False
+    text = f"{adapter['name']} {adapter['description']}".lower()
+    return (adapter['kind'] in ('Tunnel', 'Virtual') or adapter['name'].startswith('Local Area Connection*')
+            or 'bluetooth' in text or 'wi-fi direct' in text)
+
+
 def _skip(ip):
     return ip.startswith(('127.', '169.254.')) or ip == '0.0.0.0'
 
@@ -151,14 +164,21 @@ def windows_network_info():
     current = None
     for line in config.stdout.splitlines():
         if line and not line[0].isspace() and line.rstrip().endswith(':'):
-            name = line.strip().rstrip(':')
-            name = name.replace('Ethernet adapter ', '').replace('Wireless LAN adapter ', 'Wi-Fi ')
-            current = {'name': name, 'description': '', 'status': 'Unknown',
+            header = line.strip().rstrip(':')
+            kind, name = 'NIC', header
+            for prefix, label in _ADAPTER_KINDS:
+                if header.startswith(prefix):
+                    kind, name = label, header[len(prefix):].strip()
+                    break
+            current = {'name': name, 'kind': kind, 'description': '', 'status': 'Unknown',
                        'mac': '', 'bridge': 'bridge' in name.lower(),
                        'addresses': [], 'gateway': ''}
             interfaces.append(current)
         if not current:
             continue
+        description = re.match(r'^\s*Description[ .]*:\s*(.+)$', line)
+        if description and not current['description']:
+            current['description'] = description.group(1).strip()
         ipv4 = re.search(r'\bIPv4[^:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})', line, re.IGNORECASE)
         if ipv4 and not _skip(ipv4.group(1)):
             address = ipv4.group(1)
@@ -173,6 +193,7 @@ def windows_network_info():
             current['gateway'] = gateway.group(1)
         if re.search(r'\bmedia disconnected\b', line, re.IGNORECASE):
             current['status'] = 'Disconnected'
+    interfaces = [i for i in interfaces if not _hidden_adapter(i)]
 
     neighbors = []
     current_interface = ''

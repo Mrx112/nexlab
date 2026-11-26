@@ -28,7 +28,7 @@ Pengguna akhir memakai rilis aplikasi dan tidak memerlukan akses repository atau
 - Perubahan kabel QEMU saat VM berjalan otomatis menyambungkan ulang NIC socket UDP lewat QMP; admin juga dapat memakai **Hard Reset Link Socket** dari menu node jika perlu.
 - Console HTML5 (xterm.js) di jendela mengambang, bisa banyak sekaligus atau dibuka di tab baru.
 - Panel inspektor: nyala/mati/wipe, IP PC lewat GUI (static/DHCP, seperti tab Desktop Packet Tracer), layanan DHCP & DNS di Server, uji ping cepat dengan animasi paket, lihat running/startup-config.
-- Ekspor lab menyediakan format NexLab JSON (`.nexlab.json`), Cisco Packet Tracer (`.pkt`), dan konfigurasi perangkat (`.txt`). Saat ekspor/impor NexLab JSON, topologi, konfigurasi, catatan, workbook, peta 3D, dan timer dapat dipilih satu per satu. File Cisco Packet Tracer juga dapat diimpor. Ekspor `.pkt` mempertahankan perangkat/koneksi sumber Packet Tracer yang tidak didukung NexLab; lab NexLab biasa dibuat dari template Packet Tracer lengkap, termasuk struktur perangkat/workspace/kabel, konfigurasi IOS, dan IP statis PC/server yang kompatibel. Port router yang dipakai koneksi diaktifkan otomatis. Perangkat atau fitur yang dilewati dilaporkan sebagai peringatan; layanan server dan Wi-Fi NexLab perlu disetel ulang di Packet Tracer, dan IP/gateway/rute harus sesuai agar ping berhasil.
+- Ekspor lab menyediakan format NexLab JSON (`.nexlab.json`), Cisco Packet Tracer (`.pkt`), dan konfigurasi perangkat (`.txt`). Saat ekspor/impor NexLab JSON, topologi, konfigurasi, catatan, workbook, peta 3D, dan timer dapat dipilih satu per satu. File Cisco Packet Tracer juga dapat diimpor. Ekspor `.pkt` mempertahankan perangkat/koneksi sumber Packet Tracer yang tidak didukung NexLab; lab NexLab biasa dibuat dari template Packet Tracer lengkap, termasuk struktur perangkat/workspace/kabel, konfigurasi IOS, dan IP statis PC/server yang kompatibel. Port router yang dipakai koneksi diaktifkan otomatis. Perangkat atau fitur yang dilewati dilaporkan sebagai peringatan; layanan server dan Wi-Fi NexLab perlu disetel ulang di Packet Tracer, dan IP/gateway/rute harus sesuai agar ping berhasil. Perangkat tanpa padanan langsung tetap diekspor: OLT/ODP/ONT/Hub sebagai switch 2950T dan CCTV/IP Phone/IoT/Smartphone/Tablet sebagai PC; lab kosong ditolak dengan pesan yang jelas.
 
 **Perangkat simulasi (CLI ala Cisco IOS)**
 | Perangkat | Kemampuan |
@@ -91,7 +91,7 @@ CLI mendukung singkatan (`sh ip int br`, `conf t`), `?` untuk bantuan, **Tab** u
 **Perangkat real (butuh server dijalankan sebagai root)**
 | Node | Fungsi |
 |---|---|
-| QEMU VM | menjalankan image asli (Cisco vIOS/vIOSL2, CSR1000v, Arista vEOS, MikroTik CHR, VyOS, FortiGate, pfSense, Linux…), tiap NIC adalah TAP, console serial di browser, KVM otomatis jika ada |
+| QEMU VM | menjalankan image asli (Cisco vIOS/vIOSL2, CSR1000v, Arista vEOS, MikroTik CHR, VyOS, FortiGate, pfSense, Linux…), tiap NIC adalah TAP, console serial di browser; akselerasi diatur di **Status sistem → Akselerasi VM** (Otomatis: KVM di Linux, HVF di Mac Intel, WHPX di Windows bila tersedia; atau paksa WHPX/TCG). Jika akselerator gagal, VM otomatis dijalankan ulang dengan TCG |
 | Linux Host | network namespace dengan stack TCP/IP asli dan shell bash (hampir 0 MB RAM) |
 | Cloud | bridge ke NIC fisik/bridge host → lab tersambung ke **switch/router sungguhan** |
 | Perangkat Fisik | console Telnet/SSH dari browser ke perangkat jaringan sungguhan di LAN (atau terminal server untuk kabel console) |
@@ -128,7 +128,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.8`. Setelah rilis `v1.4.8` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.14`. Setelah rilis `v1.4.14` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
 
 ### Instalasi dari source (developer/server)
 
