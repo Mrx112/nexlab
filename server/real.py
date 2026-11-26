@@ -26,6 +26,7 @@ import subprocess
 import sys
 
 from . import sysinfo
+from .simbridge import SimBridge
 
 try:  # POSIX-only (Linux Host consoles)
     import fcntl
@@ -141,7 +142,9 @@ def accel_args():
         return ['-enable-kvm', '-cpu', 'host'], 'KVM'
     if OS == 'macos' and platform.machine() == 'x86_64':
         return ['-accel', 'hvf', '-cpu', 'host'], 'HVF'
-    if OS == 'windows' and (want == 'whpx' or whpx_available()):
+    # WHPX is opt-in: with it, guests such as MikroTik CHR boot but detect no PCI NICs (e1000 and
+    # virtio tested), which breaks network labs, so 'auto' stays on TCG on Windows.
+    if OS == 'windows' and want == 'whpx':
         return ['-accel', 'whpx,kernel-irqchip=off'], 'WHPX (Hyper-V)'
     return TCG_ARGS
 
@@ -299,6 +302,7 @@ class RealManager:
         os.makedirs(os.path.join(self.images_dir, 'qemu'), exist_ok=True)
         os.makedirs(self.run_dir, exist_ok=True)
         self.nodes = {}       # (lab, nid) -> dict
+        self.bridge = SimBridge(self)   # VM NICs cabled to simulated devices
         self.bridges = {}     # lab -> set(bridge names we created)
         self.next_port = 32769
 
@@ -406,7 +410,8 @@ class RealManager:
             model = p.get('nic_model') or 'e1000'
             device_id = f',id=nic{i}' if mode == 'socket' else ''
             dev = ['-device', f'{model}{device_id},netdev=n{i},mac={mac}']
-            if mode == 'socket':
+            # NICs cabled to simulated devices always use the UDP bridge, also in Linux tap mode
+            if mode == 'socket' or self._sim_peer(rt, node, ifn):
                 args += ['-netdev', self.socket_netdev(rt, node, ifn, i)] + dev
                 nics.append({'ifn': ifn, 'index': i, 'device_id': f'nic{i}', 'netdev_id': f'n{i}',
                              'model': model, 'mac': mac,
@@ -469,6 +474,15 @@ class RealManager:
         restrict = ',restrict=on' if config.get('restrict') else ''
         return f'user,id=n{i}{restrict}{suffix}'
 
+    @staticmethod
+    def _sim_peer(rt, node, ifn):
+        """True when this VM NIC is cabled to a simulated device (served by the sim bridge)."""
+        for l in rt.lab['links']:
+            sides = SimBridge.sim_side(rt, l)
+            if sides and l[sides[0]]['node'] == node['id'] and l[sides[0]]['iface'] == ifn:
+                return True
+        return False
+
     def socket_netdev_config(self, rt, node, ifn, i):
         for l in rt.lab['links']:
             for me, peer in (('a', 'b'), ('b', 'a')):
@@ -477,6 +491,11 @@ class RealManager:
                     if not pn:
                         break
                     if pn['type'] == 'qemu':
+                        pa, pb = self.link_ports(rt, l)
+                        mine, theirs = (pa, pb) if me == 'a' else (pb, pa)
+                        return {'type': 'socket', 'id': f'n{i}', 'udp': f'127.0.0.1:{theirs}',
+                                'localaddr': f'127.0.0.1:{mine}'}
+                    if SimBridge.sim_side(rt, l):
                         pa, pb = self.link_ports(rt, l)
                         mine, theirs = (pa, pb) if me == 'a' else (pb, pa)
                         return {'type': 'socket', 'id': f'n{i}', 'udp': f'127.0.0.1:{theirs}',
@@ -805,6 +824,8 @@ class RealManager:
         if r.get('ns'):
             sh('ip', 'netns', 'del', r['ns'])
         self._cleanup_taps(r)
+        if getattr(rt, 'lab', None):
+            await self.bridge.sync(rt)
         if r.get('hub'):
             await r['hub'].emit('\r\n[node dihentikan]\r\n')
 
@@ -819,6 +840,7 @@ class RealManager:
         await self.sync_links(rt)
 
     async def shutdown(self):
+        self.bridge.close_all()
         for (lab, nid), r in list(self.nodes.items()):
             await self.stop(type('R', (), {'id': lab})(), {'id': nid})
         for lab, brs in self.bridges.items():
@@ -833,6 +855,7 @@ class RealManager:
         return r['taps'].get(ifn)
 
     async def sync_links(self, rt):
+        await self.bridge.sync(rt)
         if net_mode() != 'tap':
             return
         want = {}  # bridge -> set(devs)

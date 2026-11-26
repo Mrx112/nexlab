@@ -109,6 +109,9 @@ class Net:
         self._routes = {}
         self._dyn = None
         self.adj = {'ospf': {}, 'rip': {}}
+        # QEMU NICs cabled to simulated devices (see simbridge.py): (vm nid, vm iface) -> info
+        bridge = getattr(getattr(getattr(rt, 'mgr', None), 'real', None), 'bridge', None)
+        self.bridged = {(e['nid'], e['ifn']): e for e in bridge.endpoints(rt)} if bridge else {}
         self._build()
 
     # ------------------------------------------------------------ basics
@@ -161,6 +164,8 @@ class Net:
         if not l:
             return False
         pn, pi = self.peer(l, nid, base)
+        if (pn, pi) in self.bridged:
+            return True
         if not (pn in self.nodes and self.running(pn) and self.admin_up(pn, pi)):
             return False
         return self.wifi_ok(nid, base, pn, pi)
@@ -291,6 +296,8 @@ class Net:
             b = (l['b']['node'], l['b']['iface'])
             if a[0] not in self.nodes or b[0] not in self.nodes:
                 continue
+            if a in self.bridged or b in self.bridged:
+                continue                    # domain taken from the simulated side, see dom()
             if not self.link_up(*a):
                 continue
             if self.t(a[0]) in SWITCH and not self.port_forwarding(a[0], a[1]):
@@ -303,6 +310,13 @@ class Net:
     def dom(self, nid, ifn):
         if ifn.startswith('Loopback'):
             return f'lo|{nid}|{ifn}'
+        b = self.bridged.get((nid, ifn))
+        if b:
+            sn, si = b['sim_nid'], b['sim_ifn']
+            point = self.channels(sn, si).get('u') if sn in self.nodes and self.link_up(sn, si) else None
+            if point is None or (self.t(sn) in SWITCH and not self.port_forwarding(sn, si)):
+                return f'down|{nid}|{ifn}'
+            return self.uf.find(point)
         return self.uf.find(L3(nid, ifn))
 
     # ------------------------------------------------------------ L3 endpoints
@@ -328,6 +342,10 @@ class Net:
                         if self.l3_up(nid, ifn):
                             out.append(dict(nid=nid, ifn=ifn, ip=i['ip'], ln=mask_len(i['mask']),
                                             dom=self.dom(nid, ifn)))
+            for (nid, ifn), b in self.bridged.items():
+                d = self.dom(nid, ifn)
+                if not d.startswith('down|'):
+                    out += [dict(nid=nid, ifn=ifn, ip=ip, ln=ln, dom=d) for ip, ln in b['ips'].items()]
             self._eps = out
         return self._eps
 
@@ -363,8 +381,16 @@ class Net:
         if nid in self._routes:
             return self._routes[nid]
         t = self.t(nid)
-        s = self.st(nid)
         conn = self.connected(nid)
+        vm = [b for (n, _), b in self.bridged.items() if n == nid]
+        if vm:
+            r = list(conn)
+            gw = next((b['gw'] for b in vm if b.get('gw')), None)
+            if gw:
+                r.append(dict(code='S*', net='0.0.0.0', ln=0, iface=None, nh=gw, ad=1, metric=0))
+            self._routes[nid] = r
+            return r
+        s = self.st(nid)
         if t in HOST:
             r = list(conn)
             if s.get('gw') and valid_ip(s['gw']):
@@ -689,6 +715,10 @@ class Net:
                              if x.startswith('Vlan') or xi.get('mode') == 'routed']
                 else:
                     cands = []
+                for (vn, vi), b in self.bridged.items():
+                    if vn == u and b.get('mac'):
+                        root = self.dom(vn, vi)
+                        out += [(int(v), b['mac'], ifn) for v in s['vlans'] if root == self.uf.find(VP(sw, v))]
                 for c in cands:
                     root = self.uf.find(L3(u, c))
                     for v in s['vlans']:

@@ -199,7 +199,7 @@
             <tr><td><b>Real</b></td><td>QEMU VM, Linux Host, Cloud, Perangkat Fisik</td><td>Menjalankan sistem/paket sungguhan atau terhubung ke jaringan fisik. Beberapa fitur butuh Linux dengan hak root.</td></tr>
           </tbody>
         </table></div>
-        <div class="callout"><p><b>Catatan jujur:</b> node simulasi adalah emulasi CLI, bukan IOS asli, dan tidak mengirim paket ke jaringan fisik. Untuk lalu lintas nyata, gunakan node QEMU/Linux Host yang dikabelkan ke node Cloud.</p></div>
+        <div class="callout"><p><b>Catatan jujur:</b> node simulasi adalah emulasi CLI, bukan IOS asli, dan tidak mengirim paket ke jaringan fisik. VM QEMU yang dikabelkan ke switch/router/PC simulasi dapat saling ping dengan perangkat simulasi (lihat <a href="#real">Perangkat real</a>). Untuk lalu lintas nyata, gunakan node QEMU/Linux Host yang dikabelkan ke node Cloud.</p></div>
         <figure>
           <img src="screenshots/app-topology.png" alt="Editor topologi NexLab dengan router, switch, dan PC" width="821" height="581" loading="lazy">
           <figcaption>Editor topologi: perangkat, kabel antar port, dan lampu status link.</figcaption>
@@ -668,11 +668,14 @@ images/qemu/mikrotik-7.15/chr.img
 images/qemu/linux-alpine/alpine.iso
 images/qemu/vyos.qcow2</code></pre>
         <p>Tambahkan node <b>QEMU VM</b>, pilih image, atur RAM/CPU/jumlah NIC, lalu Start. Setiap node memakai disk overlay sendiri sehingga image asli tidak berubah; tombol <b>Wipe</b> menghapus overlay.</p>
+        <h3>VM ke perangkat simulasi</h3>
+        <p>Kabelkan NIC VM QEMU langsung ke port switch, router, atau PC simulasi. NexLab menjembatani kabel itu: VM dan perangkat simulasi saling menjawab ARP dan ping IPv4 ke dua arah, termasuk lewat router simulasi. Atur IP di dalam VM (mis. MikroTik: <code>/ip address add address=192.168.10.30/24 interface=ether1</code>); NexLab mempelajari alamat dan gateway VM dari lalu lintasnya, dan alamat MAC VM tampil di <code>show mac address-table</code> switch.</p>
+        <p>Ping dari PC/router simulasi ke VM dikirim sebagai ICMP sungguhan, sehingga firewall dan routing di dalam VM menentukan hasilnya. Batasan: hanya frame tanpa tag VLAN (port access), dan lalu lintas TCP/UDP (SSH, HTTP, DHCP) belum dibawa.</p>
         <h3>Akselerasi VM</h3>
         <p>Atur di <b>Status sistem → Kemampuan mode real → Akselerasi VM</b> (khusus admin):</p>
         <ul>
-          <li><b>Otomatis</b> (disarankan) — memakai KVM di Linux, HVF di Mac Intel, dan WHPX (Hyper-V) di Windows bila tersedia; selain itu emulasi TCG.</li>
-          <li><b>WHPX</b> — paksa akselerasi Hyper-V di Windows.</li>
+          <li><b>Otomatis</b> (disarankan) — memakai KVM di Linux dan HVF di Mac Intel; di Windows memakai TCG.</li>
+          <li><b>WHPX</b> — akselerasi Hyper-V di Windows, lebih cepat; tetapi pada sebagian image (mis. MikroTik CHR) kartu jaringan tidak terdeteksi, jadi pakai hanya untuk VM yang sudah diuji.</li>
           <li><b>TCG</b> — emulasi murni, paling kompatibel tetapi paling lambat.</li>
         </ul>
         <p>Jika akselerator gagal untuk suatu image, VM otomatis dijalankan ulang dengan TCG dan editor menampilkan pemberitahuan. Bila WHPX belum tersedia di Windows, aktifkan <b>Windows Hypervisor Platform</b> di <i>Turn Windows features on or off</i>, lalu restart komputer. Lokasi folder image yang sebenarnya juga ditampilkan di Status sistem.</p>

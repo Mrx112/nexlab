@@ -91,14 +91,14 @@ CLI mendukung singkatan (`sh ip int br`, `conf t`), `?` untuk bantuan, **Tab** u
 **Perangkat real (butuh server dijalankan sebagai root)**
 | Node | Fungsi |
 |---|---|
-| QEMU VM | menjalankan image asli (Cisco vIOS/vIOSL2, CSR1000v, Arista vEOS, MikroTik CHR, VyOS, FortiGate, pfSense, Linux…), tiap NIC adalah TAP, console serial di browser; akselerasi diatur di **Status sistem → Akselerasi VM** (Otomatis: KVM di Linux, HVF di Mac Intel, WHPX di Windows bila tersedia; atau paksa WHPX/TCG). Jika akselerator gagal, VM otomatis dijalankan ulang dengan TCG |
+| QEMU VM | menjalankan image asli (Cisco vIOS/vIOSL2, CSR1000v, Arista vEOS, MikroTik CHR, VyOS, FortiGate, pfSense, Linux…), tiap NIC adalah TAP, console serial di browser; akselerasi diatur di **Status sistem → Akselerasi VM** (Otomatis: KVM di Linux, HVF di Mac Intel, TCG di Windows; WHPX bisa dipilih manual, tetapi pada sebagian image seperti MikroTik CHR kartu jaringan tidak terdeteksi). Jika akselerator gagal, VM otomatis dijalankan ulang dengan TCG |
 | Linux Host | network namespace dengan stack TCP/IP asli dan shell bash (hampir 0 MB RAM) |
 | Cloud | bridge ke NIC fisik/bridge host → lab tersambung ke **switch/router sungguhan** |
 | Perangkat Fisik | console Telnet/SSH dari browser ke perangkat jaringan sungguhan di LAN (atau terminal server untuk kabel console) |
 
 Setiap kabel antar node real dibuat sebagai Linux bridge (STP/CDP/LLDP diteruskan).
 
-> Catatan jujur: node simulasi adalah emulasi CLI, bukan IOS asli, dan tidak mengirim paket ke jaringan fisik. Kabel antara node simulasi dan node real ditampilkan putus-putus kuning dan hanya bersifat dokumentasi. Untuk lalu lintas nyata ke perangkat fisik, gunakan node QEMU/Linux Host yang dikabelkan ke Cloud. Image vendor (mis. Cisco) tidak disertakan karena berlisensi; gunakan image milik Anda sendiri.
+> Catatan jujur: node simulasi adalah emulasi CLI, bukan IOS asli, dan tidak mengirim paket ke jaringan fisik. VM QEMU yang dikabelkan ke node simulasi (switch/router/PC) dijembatani NexLab: VM dan perangkat simulasi saling menjawab ARP dan ping IPv4 dua arah (frame tanpa tag VLAN; TCP/UDP belum dibawa), dan ping ke VM selalu dikonfirmasi oleh VM sungguhan. Kabel antara node simulasi dan Linux Host/Perangkat Fisik tetap ditampilkan putus-putus kuning dan hanya bersifat dokumentasi. Untuk lalu lintas nyata ke perangkat fisik, gunakan node QEMU/Linux Host yang dikabelkan ke Cloud. Image vendor (mis. Cisco) tidak disertakan karena berlisensi; gunakan image milik Anda sendiri.
 
 ## Kebutuhan
 
@@ -128,7 +128,7 @@ Buka **Status sistem → Scan for updates** untuk membandingkan versi aplikasi d
 
 Jika update gagal, file sementara dipertahankan untuk diagnosis di folder `Update`; log updater ada di `%LOCALAPPDATA%\NexLab\logs\update.log`. Build GitHub Actions saat ini menargetkan Windows x64, macOS Intel x64 dan Apple Silicon arm64, serta Linux x86_64. Paket macOS belum ditandatangani/notarized, dan paket Linux mensyaratkan distro berbasis glibc yang kompatibel dengan runner Ubuntu 22.04.
 
-Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.14`. Setelah rilis `v1.4.14` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
+Updater memasang rilis versi stabil yang dipublikasikan sebagai tag GitHub (format `vX.Y.Z`), bukan setiap commit branch. Versi aplikasi saat ini adalah `1.4.15`. Setelah rilis `v1.4.15` selesai dipublikasikan, admin dapat memeriksanya di **Status sistem → Update aplikasi** atau mengunduh installer dari halaman download website.
 
 ### Instalasi dari source (developer/server)
 

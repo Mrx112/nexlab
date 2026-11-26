@@ -195,7 +195,7 @@ class Editor {
         <circle class="end st-${st.b || 'off'}" cx="${G.bx - G.ux * dB}" cy="${G.by - G.uy * dB}" r="4"/>
         ${lab(G.ax + G.ux * tA, G.ay + G.uy * tA, l.a.iface)}
         ${lab(G.bx - G.ux * tB, G.by - G.uy * tB, l.b.iface)}
-        ${st.mixed ? `<title>Link simulasi ↔ perangkat real: hanya dokumentasi, paket tidak lewat</title>` : ''}</g>`;
+        ${st.mixed ? `<title>Link simulasi ↔ Linux Host/Perangkat Fisik: hanya dokumentasi, paket tidak lewat</title>` : ''}</g>`;
     }).join('');
   }
   drawNotes() {
@@ -1060,7 +1060,8 @@ class Editor {
     const word = s => ({ up: '<span class="yes">up</span>', down: '<span class="no">shutdown</span>', wait: '<span style="color:var(--amber)">menunggu ujung lain</span>', off: '<span class="muted">mati</span>' }[s] || '—');
     el.innerHTML = `<h3>Kabel</h3>
       <dl class="kv" style="margin-top:12px"><dt>${esc(a?.name)}</dt><dd class="mono">${esc(l.a.iface)} ${word(st.a)}</dd><dt>${esc(b?.name)}</dt><dd class="mono">${esc(l.b.iface)} ${word(st.b)}</dd></dl>
-      ${st.mixed ? '<div class="tip">Kabel antara node simulasi dan node real hanya bersifat dokumentasi. Untuk lalu lintas sungguhan, sambungkan node real (QEMU/Linux/Cloud) satu sama lain.</div>' : ''}
+      ${st.bridged ? '<div class="tip">Kabel VM QEMU ↔ node simulasi dijembatani NexLab: VM dan perangkat simulasi saling menjawab ARP dan ping (IPv4, tanpa tag VLAN). Atur IP di dalam VM; TCP/UDP (SSH, HTTP) belum dibawa. Hasil ping ke VM dikonfirmasi oleh VM sungguhan.</div>' : ''}
+      ${st.mixed ? '<div class="tip">Kabel antara node simulasi dan Linux Host/Perangkat Fisik hanya bersifat dokumentasi. VM QEMU yang dikabelkan ke node simulasi dijembatani NexLab (ARP dan ping dua arah).</div>' : ''}
       <h5>Jenis kabel</h5><div class="row"><label class="check"><input type="radio" name="cs" value="copper" ${l.style !== 'fiber' ? 'checked' : ''}> Tembaga</label><label class="check"><input type="radio" name="cs" value="fiber" ${l.style === 'fiber' ? 'checked' : ''}> Fiber</label></div>
       <h5>Desain kabel</h5>
       <div class="row"><div class="field grow"><label>Warna</label><input type="color" class="input sm" id="lCol" value="${esc(l.color || '#3B4652')}"></div>

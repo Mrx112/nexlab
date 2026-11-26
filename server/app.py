@@ -35,7 +35,7 @@ STATIC = os.path.join(BASE, 'static')
 ANIMASI = os.path.join(BASE, 'animasi')
 APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COOKIE = 'nexlab_session'
-VERSION = '1.4.14'
+VERSION = '1.4.15'
 _RELEASE_API = 'https://api.github.com/repos/Mrx112/nexlab/releases/latest'
 _UPDATE_ASSETS = {
     'win32': 'NexLab-Setup-Windows.cmd',
@@ -891,7 +891,7 @@ async def node_ping(req):
             return web.json_response({'ok': False, 'why': 'tujuan tidak punya IP aktif'})
         e.sort(key=lambda x: x['ifn'].startswith('Loopback'))
         dst = e[0]['ip']
-    res = net.ping(src, dst)
+    res = await rt.ping(src, dst)
     path = [src] + [h['nid'] for h in res.get('hops', [])]
     return web.json_response({'ok': res['ok'], 'why': res.get('why'), 'dst': dst, 'path': path,
                               'at': res.get('at')})
@@ -1033,7 +1033,7 @@ async def lab_check(req):
                     e.sort(key=lambda x: x['ifn'].startswith('Loopback'))
                     dst = e[0]['ip'] if e else ''
                 if s and dst and rt.is_running(s['id']):
-                    r = net.ping(s['id'], dst)
+                    r = await rt.ping(s['id'], dst)
                     ok, info = r['ok'], '' if r['ok'] else (r.get('why') or '')
                 else:
                     info = 'node mati / tujuan tanpa IP'

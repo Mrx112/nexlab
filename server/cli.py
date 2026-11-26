@@ -645,8 +645,7 @@ class IOSCli:
         if not valid_ip(dst):
             await self.out('% Unrecognized host or address, or protocol not running.\n\n')
             return
-        net = self.net()
-        res = net.ping(self.nid, dst, src_ip=src)
+        res = await self.rt.ping(self.nid, dst, src_ip=src)
         await self.out('Type escape sequence to abort.\n')
         await self.out(f'Sending {count}, 100-byte ICMP Echos to {dst}, timeout is 2 seconds:\n')
         if src:
@@ -685,7 +684,7 @@ class IOSCli:
             return
         await self.out('Type escape sequence to abort.\nTracing the route to ' + dst + '\nVRF info: (vrf in name/id, vrf out name/id)\n')
         net = self.net()
-        res = net.ping(self.nid, dst)
+        res = await self.rt.ping(self.nid, dst)
         f = net.forward(self.nid, dst)
         n = 0
         for n, h in enumerate(f['hops'], 1):
@@ -2190,8 +2189,7 @@ class PCCli:
         dst = await self.resolve(target)
         if not dst:
             return
-        net = self.rt.net()
-        res = net.ping(self.nid, dst)
+        res = await self.rt.ping(self.nid, dst)
         await self.out(f'\nPinging {dst} with 32 bytes of data:\n\n')
         ok = 0
         lose_first = False
@@ -2236,7 +2234,7 @@ class PCCli:
         await self.out(f'\nTracing route to {dst} over a maximum of 30 hops: \n\n')
         net = self.rt.net()
         f = net.forward(self.nid, dst)
-        res = net.ping(self.nid, dst)
+        res = await self.rt.ping(self.nid, dst)
         n = 0
         for n, h in enumerate(f['hops'], 1):
             await asyncio.sleep(0.25)

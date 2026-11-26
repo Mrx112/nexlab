@@ -36,8 +36,8 @@ const App = {
   },
   accelControl(c) {
     const hint = c.os === 'windows'
-      ? (c.whpx ? 'WHPX tersedia di komputer ini; mode Otomatis memakainya.'
-                : 'WHPX belum tersedia. Aktifkan "Windows Hypervisor Platform" di Turn Windows features on or off, lalu restart komputer.')
+      ? 'Otomatis memakai TCG di Windows. WHPX ' + (c.whpx ? 'tersedia dan' : 'belum tersedia (aktifkan "Windows Hypervisor Platform" lalu restart);')
+        + ' lebih cepat, tetapi pada sebagian image (mis. MikroTik CHR) kartu jaringan tidak terdeteksi — pilih WHPX hanya untuk VM yang sudah diuji.'
       : (c.os === 'linux' ? 'Otomatis memakai KVM bila /dev/kvm dapat diakses.' : 'Otomatis memakai HVF pada Mac Intel.');
     if (this.me.role !== 'admin') return `<div class="muted" style="font-size:12.5px">${esc(hint)}</div>`;
     const options = [['auto', 'Otomatis (disarankan)'], ...(c.os === 'windows' ? [['whpx', 'WHPX (Hyper-V)']] : []), ['tcg', 'TCG (emulasi, paling kompatibel)']];

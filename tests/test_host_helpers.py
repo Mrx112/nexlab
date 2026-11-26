@@ -17,12 +17,13 @@ class AccelerationTests(unittest.TestCase):
         real._accel.update(self.saved)
         self.env.stop()
 
-    def test_auto_uses_whpx_only_when_available(self):
+    def test_auto_keeps_tcg_on_windows_and_whpx_is_opt_in(self):
+        # WHPX hides PCI NICs from guests such as MikroTik CHR, so it is never chosen automatically.
         real.set_accel_preference('auto')
         with mock.patch.object(real, 'OS', 'windows'), mock.patch.object(real, 'whpx_available', return_value=True):
-            self.assertEqual(real.accel_args()[1], 'WHPX (Hyper-V)')
-        with mock.patch.object(real, 'OS', 'windows'), mock.patch.object(real, 'whpx_available', return_value=False):
             self.assertEqual(real.accel_args(), real.TCG_ARGS)
+            real.set_accel_preference('whpx')
+            self.assertEqual(real.accel_args()[1], 'WHPX (Hyper-V)')
 
     def test_tcg_preference_and_environment_override(self):
         real.set_accel_preference('tcg')

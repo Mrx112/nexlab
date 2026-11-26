@@ -356,6 +356,24 @@ class LabRuntime:
     def net(self):
         return Net(self)
 
+    async def ping(self, src, dst, **kw):
+        """Simulated ping that also reaches bridged QEMU VMs.
+
+        An address not owned by any simulated endpoint is first asked for (ARP) on the lab's
+        VM bridges; a ping that ends at a VM is confirmed with a real ICMP echo to that VM."""
+        bridge = self.mgr.real.bridge
+        net = self.net()
+        if bridge.ports_for(self) and net.owner(dst) is None and await bridge.resolve(self, dst):
+            net = self.net()
+        res = net.ping(src, dst, **kw)
+        # 'noreturn' at a VM only means its gateway is not known yet; the real echo reply teaches it.
+        if bridge.is_vm(self, res.get('dst_node')) and (res['ok'] or res.get('why') == 'noreturn'):
+            if not await bridge.verify_ping(self, net, res, src, dst):
+                return dict(res, ok=False, why='timeout', at=res['dst_node'])
+            if not res['ok']:
+                res = self.net().ping(src, dst, **kw)
+        return res
+
     def mark_dirty(self):
         self.dirty = True
 
@@ -529,8 +547,9 @@ class LabRuntime:
             ka = kind_of(self.by_id[l['a']['node']]['type'])
             kb = kind_of(self.by_id[l['b']['node']]['type'])
             real_a, real_b = ka in ('real', 'remote'), kb in ('real', 'remote')
-            mixed = (ka == 'sim' and real_b) or (kb == 'sim' and real_a)
-            links[l['id']] = {'a': sides[0], 'b': sides[1], 'mixed': mixed}
+            bridged = bool(self.mgr.real.bridge.sim_side(self, l))   # QEMU <-> simulated: carried by simbridge
+            mixed = not bridged and ((ka == 'sim' and real_b) or (kb == 'sim' and real_a))
+            links[l['id']] = {'a': sides[0], 'b': sides[1], 'mixed': mixed, 'bridged': bridged}
         return {'nodes': nodes, 'links': links, 'restart': self.mgr.real.stale_links(self)}
 
     def dhcp_tick(self):
