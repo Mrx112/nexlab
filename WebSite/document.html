@@ -92,6 +92,15 @@
     details summary { cursor: pointer; font-weight: 600; color: var(--text); }
     details[open] summary { margin-bottom: 8px; }
     details p:last-child, details ul:last-child { margin-bottom: 0; }
+    .release { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); padding: 16px 18px; margin: 0 0 14px; }
+    .release header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-bottom: 8px; }
+    .release h3 { margin: 0; font-size: 17px; }
+    .release time { color: var(--muted); font-size: 13px; }
+    .release ul { margin-bottom: 0; }
+    .release h4 { margin: 12px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: rgba(55,230,189,.15); color: var(--teal); border: 1px solid rgba(55,230,189,.35); }
+    .whatsnew { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(55,230,189,.3); background: rgba(55,230,189,.06); color: var(--body); font-size: 14px; }
+    .whatsnew a { font-weight: 600; }
     .hidden-by-search { display: none !important; }
     .no-result { display: none; color: var(--muted); font-size: 13px; padding: 4px 10px; }
     footer.doc-footer { border-top: 1px solid var(--border); padding: 20px 24px; text-align: center; color: var(--muted); font-size: 12.5px; }
@@ -166,6 +175,7 @@
         <li><a href="#data">Data &amp; cadangan</a></li>
         <li><a href="#masalah">Pemecahan masalah</a></li>
         <li><a href="#faq">FAQ</a></li>
+        <li><a href="#pembaruan">Riwayat pembaruan</a></li>
         <li><a href="#dukungan">Donasi &amp; masukan</a></li>
       </ul>
       <p class="no-result" id="no-result">Topik tidak ditemukan.</p>
@@ -180,6 +190,7 @@
           <a class="btn" href="#tutorial">Tutorial pertama</a>
           <a class="btn" href="#masalah">Pemecahan masalah</a>
         </div>
+        <div class="whatsnew"><span class="badge">Baru · v1.4.15</span><span>VM QEMU kini bisa saling ping dengan switch, router, dan PC simulasi.</span><a href="#pembaruan">Lihat semua pembaruan →</a></div>
       </div>
 
       <!-- ===================================================== PENGENALAN -->
@@ -668,6 +679,8 @@ images/qemu/mikrotik-7.15/chr.img
 images/qemu/linux-alpine/alpine.iso
 images/qemu/vyos.qcow2</code></pre>
         <p>Tambahkan node <b>QEMU VM</b>, pilih image, atur RAM/CPU/jumlah NIC, lalu Start. Setiap node memakai disk overlay sendiri sehingga image asli tidak berubah; tombol <b>Wipe</b> menghapus overlay.</p>
+        <h3>Kabel antar VM saat berjalan</h3>
+        <p>Di Windows, macOS, dan Linux tanpa root, kabel antar VM memakai socket UDP. Jika kabel VM diubah saat VM menyala, NIC-nya otomatis disambungkan ulang tanpa me-restart VM. Lampu link QEMU memeriksa apakah socket benar-benar aktif; bila link tampak macet, admin dapat memakai <b>Hard Reset Link Socket</b> dari menu klik-kanan node (koneksi guest terputus sesaat).</p>
         <h3>VM ke perangkat simulasi</h3>
         <p>Kabelkan NIC VM QEMU langsung ke port switch, router, atau PC simulasi. NexLab menjembatani kabel itu: VM dan perangkat simulasi saling menjawab ARP dan ping IPv4 ke dua arah, termasuk lewat router simulasi. Atur IP di dalam VM (mis. MikroTik: <code>/ip address add address=192.168.10.30/24 interface=ether1</code>); NexLab mempelajari alamat dan gateway VM dari lalu lintasnya, dan alamat MAC VM tampil di <code>show mac address-table</code> switch.</p>
         <p>Ping dari PC/router simulasi ke VM dikirim sebagai ICMP sungguhan, sehingga firewall dan routing di dalam VM menentukan hasilnya. Batasan: hanya frame tanpa tag VLAN (port access), dan lalu lintas TCP/UDP (SSH, HTTP, DHCP) belum dibawa.</p>
@@ -716,6 +729,8 @@ sudo dhclient pnet0</code></pre>
         <ul>
           <li><b>Jaringan Windows</b>: daftar NIC, IPv4/gateway, dan neighbor dari cache ARP. IP neighbor dapat dipilih untuk node Perangkat Fisik. NexLab tidak memindai subnet.</li>
           <li><b>Uji ping jaringan</b>: ping satu IP LAN atau publik (misalnya <code>8.8.8.8</code>) dari komputer server.</li>
+          <li><b>Akselerasi VM</b> (admin): Otomatis, WHPX, atau TCG — lihat <a href="#real">Perangkat real &amp; QEMU</a>.</li>
+          <li><b>Image QEMU</b>: daftar image beserta lokasi folder image yang sebenarnya pada instalasi Anda.</li>
         </ul>
         <figure>
           <img src="screenshots/app-system-update.png" alt="Halaman Status sistem NexLab dengan pemeriksaan update" width="821" height="581" loading="lazy">
@@ -723,10 +738,11 @@ sudo dhclient pnet0</code></pre>
         </figure>
         <h3>Memperbarui aplikasi</h3>
         <ol>
-          <li>Klik <b>Scan for updates</b> untuk membandingkan versi Anda dengan rilis stabil terbaru.</li>
+          <li>Klik <b>Scan update</b> untuk membandingkan versi Anda dengan rilis stabil terbaru. Pemeriksaan tetap berjalan walaupun layanan rilis sedang membatasi permintaan dari jaringan Anda.</li>
           <li><b>Windows:</b> admin dapat memilih <b>Pasang update sekarang</b>. NexLab mengunduh paket, memverifikasi SHA-256, menutup diri, memperbarui, lalu membuka kembali.</li>
           <li><b>macOS/Linux:</b> unduh installer terbaru dari <a href="index.html#download">halaman download</a> lalu jalankan seperti saat instalasi.</li>
         </ol>
+        <p>Apa saja yang berubah di setiap versi dapat dilihat di <a href="#pembaruan">Riwayat pembaruan</a>.</p>
         <p>Database, akun, lab, dan image selalu dipertahankan. Jika update Windows gagal, log ada di <code>%LOCALAPPDATA%\NexLab\logs\update.log</code>.</p>
       </section>
 
@@ -835,6 +851,28 @@ sudo dhclient pnet0</code></pre>
           <p>Bridge Layer 2 hanya tersedia di Linux dengan root. Periksa nama NIC/bridge yang dipilih di node Cloud, dan pastikan firewall host tidak memblokir. Di Windows/macOS, Cloud memakai NAT sehingga perangkat fisik tidak dapat memulai koneksi ke VM.</p>
         </details>
         <details>
+          <summary>VM (mis. MikroTik CHR) tidak melihat kartu jaringan</summary>
+          <p>Jika <code>/interface print</code> hanya menampilkan <code>lo</code>, VM kemungkinan berjalan dengan akselerasi WHPX. Buka <b>Status sistem → Akselerasi VM</b>, pilih <b>Otomatis</b> atau <b>TCG</b>, lalu matikan dan nyalakan ulang VM. Pada v1.4.14 mode Otomatis sempat memilih WHPX; sejak v1.4.15 Otomatis memakai TCG di Windows.</p>
+        </details>
+        <details>
+          <summary>VM tidak bisa ping switch/PC simulasi</summary>
+          <ul>
+            <li>Pastikan versi NexLab minimal 1.4.15 dan VM sudah dinyalakan ulang setelah update.</li>
+            <li>Kabel VM harus terpasang langsung ke port switch, router, atau PC simulasi, dan port switch-nya mode access (bukan trunk) serta tidak <code>shutdown</code>.</li>
+            <li>Atur IP di dalam VM dengan subnet yang sama, mis. MikroTik: <code>/ip address add address=192.168.10.30/24 interface=ether1</code>. Untuk tujuan di subnet lain, beri VM gateway ke router simulasi.</li>
+            <li>Tunggu sekitar 30 detik setelah switch dinyalakan (port masih fase STP, lampu kuning).</li>
+            <li>Ping dari PC simulasi ke VM dikonfirmasi oleh VM sungguhan, jadi firewall di dalam VM dapat membuatnya gagal. Saat ini hanya ARP dan ping yang dibawa; SSH/HTTP/DHCP antara VM dan perangkat simulasi belum didukung.</li>
+          </ul>
+        </details>
+        <details>
+          <summary>Scan update menampilkan "update check failed"</summary>
+          <p>Sejak v1.4.6 pemeriksaan update otomatis memakai jalur cadangan bila layanan rilis membatasi permintaan dari jaringan Anda. Jika masih gagal, periksa koneksi internet atau proxy kantor, lalu unduh installer terbaru dari <a href="index.html#download">halaman download</a> dan jalankan; data lab tetap aman.</p>
+        </details>
+        <details>
+          <summary>Hasil ekspor .pkt berbeda dari lab di NexLab</summary>
+          <p>Packet Tracer tidak memiliki semua perangkat NexLab. OLT, ODP, ONT, dan Hub diekspor sebagai switch 2950T; Kamera CCTV, IP Phone, IoT, Smartphone, dan Tablet sebagai PC; koneksi Wi-Fi tidak berbentuk kabel. Layanan DHCP/DNS/HTTP server dan pengaturan Wi-Fi perlu diatur ulang di Packet Tracer. Lab yang belum berisi perangkat tidak dapat diekspor ke <code>.pkt</code>. Setiap perubahan dilaporkan sebagai peringatan saat ekspor.</p>
+        </details>
+        <details>
           <summary>Fitur Claude tidak tersedia</summary>
           <p>Pastikan Claude Code CLI terpasang di komputer server dan sudah login (cek di Status sistem). Pengguna non-admin hanya bisa memakai fitur ini bila admin mengizinkannya.</p>
         </details>
@@ -869,8 +907,87 @@ sudo dhclient pnet0</code></pre>
         </details>
         <details>
           <summary>Bisakah file lab dipakai di Packet Tracer?</summary>
-          <p>NexLab memakai <code>.nexlab.json</code> sebagai format lab utamanya, dan dapat mengimpor file Cisco Packet Tracer <code>.pkt</code> serta menyimpan kembali lab impor sebagai <code>.pkt</code>. Saat ini ekspor Packet Tracer mempertahankan struktur file yang diimpor; perubahan konfigurasi IOS, perangkat baru, koneksi baru, dan penyambungan ulang koneksi belum didukung.</p>
+          <p>Bisa. Dari menu lab pilih <b>Ekspor → Cisco Packet Tracer (.pkt)</b>. Topologi, kabel, konfigurasi IOS router/switch, dan IP statis PC/server ikut dikonversi; perangkat tanpa padanan langsung diganti dengan model terdekat dan dilaporkan sebagai peringatan. File <code>.pkt</code> juga dapat diimpor ke NexLab dari halaman Main, lalu diekspor kembali. Konfigurasi perangkat dapat juga diekspor sebagai <code>.txt</code>.</p>
         </details>
+      </section>
+
+      <!-- ===================================================== PEMBARUAN -->
+      <section class="doc" id="pembaruan">
+        <h2>Riwayat pembaruan</h2>
+        <p>Perbarui dari <b>Status sistem → Scan update → Pasang update sekarang</b> (Windows), atau unduh installer terbaru dari <a href="index.html#download">halaman download</a>. Data lab, akun, dan image tetap aman.</p>
+
+        <article class="release" id="v1-4-15">
+          <header><h3>v1.4.15</h3><span class="badge">Terbaru</span><time datetime="2026-11-26">26 November 2026</time></header>
+          <h4>Baru</h4>
+          <ul>
+            <li><b>VM QEMU tersambung ke perangkat simulasi.</b> NIC VM yang dikabelkan ke switch, router, atau PC simulasi kini benar-benar terhubung: VM dan perangkat simulasi saling menjawab ARP dan ping dua arah, termasuk lewat router simulasi.</li>
+            <li>Ping dari PC/router simulasi ke VM dikirim sebagai ping sungguhan ke dalam VM, sehingga IP, routing, dan firewall VM menentukan hasilnya.</li>
+            <li>Alamat MAC VM tampil di <code>show mac address-table</code> switch, dan kabel VM ↔ simulasi tidak lagi ditandai "hanya dokumentasi".</li>
+          </ul>
+          <h4>Perbaikan</h4>
+          <ul>
+            <li>Mode akselerasi <b>Otomatis</b> di Windows kembali memakai TCG. Dengan WHPX, sebagian image (mis. MikroTik CHR) tidak mendeteksi kartu jaringan. WHPX tetap dapat dipilih manual.</li>
+          </ul>
+          <h4>Catatan</h4>
+          <ul>
+            <li>Yang dibawa saat ini ARP dan ping IPv4 pada port tanpa tag VLAN; SSH, HTTP, dan DHCP antara VM dan perangkat simulasi belum didukung.</li>
+          </ul>
+        </article>
+
+        <article class="release" id="v1-4-14">
+          <header><h3>v1.4.14</h3><time datetime="2026-11-26">26 November 2026</time></header>
+          <h4>Baru</h4>
+          <ul>
+            <li>Pengaturan <b>Akselerasi VM</b> di Status sistem (Otomatis, WHPX, TCG). Jika akselerator gagal saat VM dinyalakan, VM otomatis dijalankan ulang dengan TCG dan editor memberi tahu.</li>
+            <li>Status sistem menampilkan lokasi folder image QEMU yang sebenarnya.</li>
+            <li>Ekspor <code>.pkt</code> mempertahankan lebih banyak perangkat: OLT, ODP, ONT, dan Hub menjadi switch; Kamera CCTV, IP Phone, IoT, Smartphone, dan Tablet menjadi PC.</li>
+          </ul>
+          <h4>Perbaikan</h4>
+          <ul>
+            <li>Mengekspor lab kosong ke <code>.pkt</code> kini ditolak dengan pesan jelas, bukan menghasilkan file yang tidak bisa diimpor kembali.</li>
+            <li>Daftar adapter jaringan Windows lebih rapi: nama tanpa duplikasi, jenis dan deskripsi adapter, adapter virtual yang terputus disembunyikan.</li>
+            <li>Panduan "Menjalankan NexLab di Windows" di dalam aplikasi diperbarui untuk pengguna installer.</li>
+            <li>Setiap rilis kini diuji otomatis di Windows, macOS, dan Linux sebelum diterbitkan.</li>
+          </ul>
+        </article>
+
+        <article class="release" id="v1-4-13">
+          <header><h3>v1.4.9 – v1.4.13</h3><time datetime="2026-11-04">4 November 2026</time></header>
+          <h4>Baru</h4>
+          <ul>
+            <li><b>Impor dan ekspor Cisco Packet Tracer (.pkt).</b> File <code>.pkt</code> dapat diimpor dari halaman Main dan diekspor kembali dengan perangkat/koneksi sumber tetap dipertahankan.</li>
+            <li>Lab NexLab biasa dapat dikonversi ke <code>.pkt</code>: topologi, kabel, konfigurasi IOS, dan IP statis PC/server; port router yang dipakai kabel diaktifkan otomatis.</li>
+            <li>Pilihan format saat ekspor dan impor: NexLab JSON (topologi, konfigurasi, catatan, workbook, peta 3D, dan timer dapat dipilih satu per satu), Cisco Packet Tracer, atau konfigurasi perangkat <code>.txt</code>.</li>
+          </ul>
+        </article>
+
+        <article class="release" id="v1-4-8">
+          <header><h3>v1.4.7 – v1.4.8</h3><time datetime="2026-11-03">3 November 2026</time></header>
+          <h4>Perbaikan</h4>
+          <ul>
+            <li>Kabel antar VM QEMU yang diubah saat VM berjalan otomatis tersambung ulang tanpa restart VM.</li>
+            <li>Lampu status link QEMU memeriksa socket UDP yang sebenarnya, dan admin mendapat tombol <b>Hard Reset Link Socket</b>.</li>
+          </ul>
+        </article>
+
+        <article class="release" id="v1-4-6">
+          <header><h3>v1.4.6</h3><time datetime="2026-10-30">30 Oktober 2026</time></header>
+          <h4>Perbaikan</h4>
+          <ul>
+            <li><b>Scan update</b> tetap berfungsi saat layanan rilis membatasi permintaan dari jaringan Anda (sebelumnya muncul "update check failed").</li>
+            <li>Website: statistik pengunjung anonim di beranda dan dasbor admin, serta pengamanan halaman yang lebih ketat.</li>
+          </ul>
+        </article>
+
+        <article class="release" id="v1-4-5">
+          <header><h3>v1.4.5</h3><time datetime="2026-10-30">30 Oktober 2026</time></header>
+          <h4>Perbaikan</h4>
+          <ul>
+            <li>Permintaan yang tidak valid ke server kini dijawab dengan pesan yang jelas, bukan error server.</li>
+            <li>Nilai timer lab divalidasi sehingga tidak lagi menyebabkan error.</li>
+            <li>Dokumentasi pengguna lengkap di website, beserta perbaikan tautan dan form masukan.</li>
+          </ul>
+        </article>
       </section>
 
       <!-- ===================================================== DUKUNGAN -->
